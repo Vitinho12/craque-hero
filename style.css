@@ -1,0 +1,540 @@
+/* ========================================================
+   TOUCHDOWN CRAQUE HERO - RETRO ARCADE CSS
+   Estilo fiel ao clássico Touchdown Hero da Cherrypick Games
+   ======================================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #0c1117;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    max-width: 480px;
+    background-color: #1e824c;
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#gameCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+/* Efeito de Vinheta e Luzes de Estádio */
+#stadium-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: radial-gradient(
+        ellipse 92% 85% at 50% 50%,
+        transparent 65%,
+        rgba(5, 16, 10, 0.4) 85%,
+        rgba(2, 8, 4, 0.8) 100%
+    );
+    z-index: 5;
+}
+
+/* ========================================================
+   HUD RETRÔ SUPERIOR (BARRA VERMELHA TOUCHDOWN HERO)
+   ======================================================== */
+#arcade-hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+    z-index: 20;
+}
+
+/* Barra Vermelha de Stamina / Slow-Mo (Idêntica à do Touchdown Hero) */
+#stamina-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 60%;
+    max-width: 220px;
+}
+
+.stamina-label {
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: #ef4444;
+    text-shadow: 0 1px 3px #000;
+}
+
+.stamina-frame {
+    flex: 1;
+    height: 14px;
+    background: #111827;
+    border: 2px solid #ffffff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 10px rgba(239, 68, 68, 0.4);
+    position: relative;
+}
+
+#stamina-bar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ef4444 0%, #f97316 100%);
+    border-radius: 20px;
+    transition: width 0.08s linear;
+}
+
+/* Linha de Placar e Metros */
+#top-stats-row {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+}
+
+.arcade-card {
+    background: rgba(13, 22, 16, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 4px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 74px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.card-tag {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #94a3b8;
+    line-height: 1.1;
+}
+
+#meters-txt {
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 18px;
+    color: #facc15;
+    line-height: 1.1;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+#meters-txt small {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+#score-txt {
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 20px;
+    color: #ffffff;
+    line-height: 1.1;
+}
+
+#goals-txt {
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 20px;
+    color: #4ade80;
+    line-height: 1.1;
+}
+
+.arcade-btn-icon {
+    pointer-events: auto;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(13, 22, 16, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.arcade-btn-icon:active {
+    transform: scale(0.9);
+}
+
+/* ========================================================
+   POPUP DE FINTA / COMBO FLUTUANTE
+   ======================================================== */
+#combo-popup {
+    position: absolute;
+    top: 25%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    color: #ffffff;
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 24px;
+    letter-spacing: 1.5px;
+    padding: 8px 20px;
+    border-radius: 30px;
+    border: 2px solid #ffffff;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7), 0 0 20px rgba(245, 158, 11, 0.6);
+    pointer-events: none;
+    z-index: 40;
+    animation: comboAnim 0.75s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+#combo-popup.hidden {
+    display: none;
+}
+
+@keyframes comboAnim {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    100% { transform: translate(-50%, -85%) scale(1); opacity: 0; }
+}
+
+/* ========================================================
+   BOTÕES DE AÇÃO: SLOW-MO E GIRO 360°
+   ======================================================== */
+#action-controls {
+    position: absolute;
+    bottom: 24px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 25;
+    pointer-events: auto;
+}
+
+.arcade-action-btn {
+    position: relative;
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    border: 3px solid #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    transition: transform 0.1s ease;
+}
+
+.arcade-action-btn:active {
+    transform: scale(0.92);
+}
+
+.btn-slowmo {
+    background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
+    box-shadow: 0 6px 18px rgba(245, 158, 11, 0.5), 0 3px 0 #78350f;
+}
+
+.btn-spin {
+    background: linear-gradient(135deg, #0284c7 0%, #1e40af 100%);
+    box-shadow: 0 6px 18px rgba(2, 132, 199, 0.5), 0 3px 0 #1e3a8a;
+}
+
+.btn-icon {
+    font-size: 24px;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.btn-lbl {
+    font-family: 'Impact', sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.8px;
+    color: #ffffff;
+    text-shadow: 0 1px 2px #000;
+}
+
+#spin-cooldown-shade {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
+    background: rgba(0, 0, 0, 0.65);
+    pointer-events: none;
+    transition: height 0.05s linear;
+}
+
+/* ========================================================
+   INTERFACE EXCLUSIVA DO PÊNALTI
+   ======================================================== */
+#penalty-ui {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 60px 16px 36px 16px;
+    pointer-events: none;
+    z-index: 50;
+    animation: fadeIn 0.3s ease-out;
+}
+
+#penalty-ui.hidden {
+    display: none;
+}
+
+.penalty-banner {
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.96), rgba(234, 88, 12, 0.96));
+    border: 3px solid #ffffff;
+    border-radius: 18px;
+    padding: 16px 14px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 25px rgba(234, 179, 8, 0.5);
+    animation: popIn 0.4s ease-out;
+}
+
+.penalty-tag {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.35);
+    color: #fef08a;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    padding: 2px 10px;
+    border-radius: 20px;
+    margin-bottom: 4px;
+}
+
+.penalty-title {
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 26px;
+    color: #ffffff;
+    letter-spacing: 1.5px;
+    text-shadow: 2px 2px 0 #78350f;
+    margin-bottom: 2px;
+}
+
+.penalty-instruction {
+    font-size: 12px;
+    font-weight: 700;
+    color: #451a03;
+}
+
+.penalty-controls {
+    display: flex;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.btn-penalty-shoot {
+    width: 86%;
+    max-width: 320px;
+    padding: 18px 24px;
+    background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+    border: 3px solid #ffffff;
+    border-radius: 40px;
+    color: #ffffff;
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 24px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.6), 0 4px 0 #14532d;
+    animation: kickPulse 0.9s infinite alternate;
+}
+
+.btn-penalty-shoot:active {
+    transform: translateY(4px);
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.6);
+}
+
+@keyframes kickPulse {
+    0% { transform: scale(0.97); }
+    100% { transform: scale(1.03); }
+}
+
+/* Dica de Início */
+#hint-bubble {
+    position: absolute;
+    bottom: 110px;
+    left: 5%;
+    width: 90%;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    background: rgba(10, 18, 13, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: 8px 14px;
+    backdrop-filter: blur(6px);
+    pointer-events: none;
+    z-index: 15;
+    transition: opacity 1s ease;
+}
+
+/* ========================================================
+   MODAL DE FIM DE JOGO RETRÔ
+   ======================================================== */
+#game-over-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(6, 12, 8, 0.9);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    animation: fadeIn 0.25s ease-out;
+}
+
+#game-over-screen.hidden {
+    display: none;
+}
+
+.arcade-modal {
+    background: linear-gradient(160deg, #1b261d 0%, #0d140f 100%);
+    border: 2px solid rgba(46, 204, 113, 0.6);
+    border-radius: 24px;
+    padding: 28px 20px;
+    width: 88%;
+    max-width: 380px;
+    text-align: center;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 25px rgba(46, 204, 113, 0.25);
+    animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+    0% { transform: scale(0.7); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.modal-badge {
+    font-size: 50px;
+    margin-bottom: 6px;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+}
+
+.modal-title {
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 36px;
+    color: #ffffff;
+    letter-spacing: 2px;
+    margin-bottom: 2px;
+}
+
+.modal-subtitle {
+    font-size: 13px;
+    color: #94a3b8;
+    margin-bottom: 20px;
+}
+
+.modal-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.modal-stat {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 10px 6px;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-stat.highlight {
+    border-color: rgba(250, 204, 21, 0.4);
+    background: rgba(40, 32, 10, 0.55);
+}
+
+.m-label {
+    font-size: 9px;
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+}
+
+.m-val {
+    font-family: 'Impact', sans-serif;
+    font-size: 22px;
+    color: #ffffff;
+}
+
+.modal-stat.highlight .m-val {
+    color: #facc15;
+}
+
+.best-score-tag {
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+}
+
+.best-score-tag strong {
+    color: #4ade80;
+}
+
+.arcade-btn-primary {
+    width: 100%;
+    padding: 16px 20px;
+    background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+    border: 2px solid #86efac;
+    border-radius: 16px;
+    color: #ffffff;
+    font-family: 'Impact', sans-serif;
+    font-size: 21px;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #14532d, 0 10px 20px rgba(0, 0, 0, 0.5);
+    transition: transform 0.1s ease;
+}
+
+.arcade-btn-primary:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #14532d;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}

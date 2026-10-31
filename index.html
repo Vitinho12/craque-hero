@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Touchdown Craque Hero - Futebol Runner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Canvas Principal de Renderização Pixel-Arcade -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Efeito de Vinheta e Estádio Retrô -->
+        <div id="stadium-overlay"></div>
+
+        <!-- HUD Superior Estilo Touchdown Hero -->
+        <div id="arcade-hud">
+            <!-- Barra de Câmera Lenta / Stamina Retrô (Como no Touchdown Hero) -->
+            <div id="stamina-container" title="Barra de Câmera Lenta (Slow-Mo)">
+                <div class="stamina-label">SLOW-MO</div>
+                <div class="stamina-frame">
+                    <div id="stamina-bar"></div>
+                </div>
+            </div>
+
+            <!-- Placar Principal e Metragem -->
+            <div id="top-stats-row">
+                <div class="arcade-card meters-card">
+                    <span class="card-tag">DISTÂNCIA</span>
+                    <span id="meters-txt">0m <small>/ 1000m</small></span>
+                </div>
+
+                <div class="arcade-card score-card">
+                    <span class="card-tag">PONTOS</span>
+                    <span id="score-txt">0</span>
+                </div>
+
+                <div class="arcade-card goals-card">
+                    <span class="card-tag">GOLS</span>
+                    <span id="goals-txt">0</span>
+                </div>
+
+                <button id="sound-btn" class="arcade-btn-icon" title="Alternar Áudio">🔊</button>
+            </div>
+        </div>
+
+        <!-- Banner Flutuante de Finta (Ex: "DRIBLE! +150") -->
+        <div id="combo-popup" class="hidden"></div>
+
+        <!-- Botões de Ação na Corrida -->
+        <div id="action-controls">
+            <!-- Botão de Câmera Lenta (Segure para ativar) -->
+            <button id="slowmo-btn" class="arcade-action-btn btn-slowmo" title="Segure para Câmera Lenta">
+                <span class="btn-icon">⏱️</span>
+                <span class="btn-lbl">SLOW-MO</span>
+            </button>
+
+            <!-- Botão de Giro / Spin Move -->
+            <button id="spin-btn" class="arcade-action-btn btn-spin" title="Giro 360° Invulnerável">
+                <span class="btn-icon">🌪️</span>
+                <span class="btn-lbl">GIRO</span>
+                <div id="spin-cooldown-shade"></div>
+            </button>
+        </div>
+
+        <!-- Interface Exclusiva do Pênalti (Jogador Parado na Marca da Cal) -->
+        <div id="penalty-ui" class="hidden">
+            <div class="penalty-banner">
+                <div class="penalty-tag">DISPUTA DE PÊNALTI</div>
+                <h2 class="penalty-title">VOCÊ CARA A CARA COM O GOLEIRO!</h2>
+                <p class="penalty-instruction">Arraste a mira para os cantos da trave e chute com precisão!</p>
+            </div>
+
+            <div class="penalty-controls">
+                <button id="penalty-kick-btn" class="btn-penalty-shoot">
+                    <span>⚽ BATER O PÊNALTI!</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Dica de Início -->
+        <div id="hint-bubble">
+            Arraste livremente em 2D • Finte os zagueiros quando acender <strong>!</strong>
+        </div>
+
+        <!-- Tela de Fim de Jogo Arcade -->
+        <div id="game-over-screen" class="hidden">
+            <div class="arcade-modal">
+                <div class="modal-badge" id="over-emoji">💥</div>
+                <h1 class="modal-title">FIM DE JOGO</h1>
+                <p id="over-desc" class="modal-subtitle">Você foi desarmado pelo zagueiro!</p>
+
+                <div class="modal-stats-grid">
+                    <div class="modal-stat">
+                        <span class="m-label">DISTÂNCIA</span>
+                        <span id="res-meters" class="m-val">0m</span>
+                    </div>
+                    <div class="modal-stat highlight">
+                        <span class="m-label">PONTOS</span>
+                        <span id="res-score" class="m-val">0</span>
+                    </div>
+                    <div class="modal-stat">
+                        <span class="m-label">GOLS</span>
+                        <span id="res-goals" class="m-val">0</span>
+                    </div>
+                    <div class="modal-stat">
+                        <span class="m-label">FINTAS</span>
+                        <span id="res-dribbles" class="m-val">0</span>
+                    </div>
+                </div>
+
+                <div class="best-score-tag">
+                    🏆 RECORDE: <strong id="res-best">0 PTS</strong>
+                </div>
+
+                <button id="retry-btn" class="arcade-btn-primary">
+                    <span>🔄 JOGAR NOVAMENTE</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
