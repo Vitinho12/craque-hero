@@ -31,6 +31,7 @@
             <div class="stage-card">
                 <div class="stage-top">
                     <span id="stage-num">FASE 1</span>
+                    <span id="stadium-name" class="stadium-pill">☀️ MARACANÃ</span>
                     <span id="prog-txt">0m / 1000m</span>
                 </div>
                 <div class="prog-track">
@@ -51,7 +52,7 @@
                 <div class="slow-track"><div id="slow-fill"></div></div>
             </div>
             <div id="power-pill" class="power-pill hidden">
-                <span>👟 SUPER</span>
+                <span id="power-name">👟 SUPER</span>
                 <div class="power-track"><div id="power-fill"></div></div>
             </div>
             <div class="coin-card"><span class="coin-ico"></span><span id="coins">0</span></div>
@@ -77,9 +78,9 @@
         <div id="banner-sub"></div>
     </div>
 
-    <!-- Interface da Disputa de Pênalti -->
+    <!-- Interface da Disputa de Pênalti (Close-up) -->
     <div id="penalty-ui" class="hidden">
-        <div class="pen-hint">🎯 <b>DISPUTA DE PÊNALTI!</b> Arraste para mirar nos cantos</div>
+        <div class="pen-hint">🎯 <b>DISPUTA DE PÊNALTI!</b> Toque ou arraste para mirar nos cantos</div>
         <button id="shoot-btn" class="btn btn-primary btn-kick" type="button">⚽ BATER O PÊNALTI!</button>
     </div>
 
@@ -91,12 +92,13 @@
             <div class="logo-box">
                 <div class="logo-top-badge">⭐ EDIÇÃO BRASIL 2026 ⭐</div>
                 <div class="logo">
-                    <img class="logo-app-icon" src="icon.svg" alt="Craque Hero Ícone" width="56" height="56">
+                    <img class="logo-app-icon" src="icon.svg" alt="Craque Hero Ícone" width="60" height="60">
                     <h1>CRAQUE<br><span>HERO</span></h1>
                 </div>
                 <p class="tagline">Drible a zaga. Chegue na área. Faça o gol.</p>
             </div>
 
+            <!-- Card de Perfil do Jogador -->
             <div class="card preview-card">
                 <canvas id="preview"></canvas>
                 <div class="profile-fields">
@@ -117,24 +119,101 @@
                 </div>
             </div>
 
+            <!-- Card de Escolha do Time -->
             <div class="card">
                 <div class="card-title">Escolha seu time do coração</div>
                 <div id="team-grid"></div>
             </div>
 
+            <!-- Ações do Menu -->
             <div class="menu-actions">
-                <button id="play-btn" class="btn btn-primary btn-big" type="button">⚽ JOGAR</button>
+                <button id="play-btn" class="btn btn-primary btn-big" type="button">⚽ ENTRAR EM CAMPO</button>
+                <button id="shop-btn" class="btn btn-gold" type="button">🛒 LOJA DO CRAQUE (UPGRADES)</button>
                 <button id="how-to-play-btn" class="btn btn-ghost" type="button">📖 COMO JOGAR</button>
             </div>
 
             <div class="menu-footer">
                 <span id="menu-record">🏆 Recorde: 0</span>
+                <span class="menu-coins-badge">🪙 <span id="menu-total-coins">0</span></span>
                 <button id="menu-sound" class="mini-btn wide" type="button">🔊 Som</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL DE COMO JOGAR (ANTES DE ENTRAR EM CAMPO) -->
+    <!-- MODAL DA LOJA DO CRAQUE (UPGRADES COM MOEDAS) -->
+    <div id="shop-modal" class="screen overlay hidden">
+        <div class="modal shop-modal">
+            <div class="shop-header">
+                <div class="tut-badge">🏆 CENTRO DE TREINAMENTO</div>
+                <h2>LOJA DO CRAQUE</h2>
+                <div class="shop-wallet">
+                    <span>SEU SALDO:</span>
+                    <b>🪙 <span id="shop-coins-val">0</span> MOEDAS</b>
+                </div>
+            </div>
+
+            <div class="upgrades-list">
+                <!-- Upgrade 1: Slow-Mo -->
+                <div class="upgrade-item" data-up="slow">
+                    <div class="up-ico">⏱️</div>
+                    <div class="up-info">
+                        <div class="up-title">Fôlego do Slow-Mo <span class="up-lvl" id="lvl-slow">NV 1</span></div>
+                        <div class="up-desc">Drena mais devagar, durando mais tempo</div>
+                        <div class="up-bar"><div class="up-bar-fill" id="bar-slow" style="width: 20%"></div></div>
+                    </div>
+                    <button class="up-btn" id="btn-up-slow" type="button">🪙 50</button>
+                </div>
+
+                <!-- Upgrade 2: Giro 360 -->
+                <div class="upgrade-item" data-up="spin">
+                    <div class="up-ico">🌀</div>
+                    <div class="up-info">
+                        <div class="up-title">Giro Ágil <span class="up-lvl" id="lvl-spin">NV 1</span></div>
+                        <div class="up-desc">Recarrega o drible do giro muito mais rápido</div>
+                        <div class="up-bar"><div class="up-bar-fill" id="bar-spin" style="width: 20%"></div></div>
+                    </div>
+                    <button class="up-btn" id="btn-up-spin" type="button">🪙 60</button>
+                </div>
+
+                <!-- Upgrade 3: Ímã de Moedas -->
+                <div class="upgrade-item" data-up="magnet">
+                    <div class="up-ico">🧲</div>
+                    <div class="up-info">
+                        <div class="up-title">Ímã de Moedas <span class="up-lvl" id="lvl-magnet">NV 1</span></div>
+                        <div class="up-desc">Puxa as moedas do campo de longe automaticamente</div>
+                        <div class="up-bar"><div class="up-bar-fill" id="bar-magnet" style="width: 20%"></div></div>
+                    </div>
+                    <button class="up-btn" id="btn-up-magnet" type="button">🪙 75</button>
+                </div>
+
+                <!-- Upgrade 4: Chuteira Turbo -->
+                <div class="upgrade-item" data-up="boot">
+                    <div class="up-ico">👟</div>
+                    <div class="up-info">
+                        <div class="up-title">Chuteira Turbo <span class="up-lvl" id="lvl-boot">NV 1</span></div>
+                        <div class="up-desc">Supervelocidade dura mais tempo atropelando a zaga</div>
+                        <div class="up-bar"><div class="up-bar-fill" id="bar-boot" style="width: 20%"></div></div>
+                    </div>
+                    <button class="up-btn" id="btn-up-boot" type="button">🪙 80</button>
+                </div>
+
+                <!-- Upgrade 5: Pontaria de Pênalti -->
+                <div class="upgrade-item" data-up="penalty">
+                    <div class="up-ico">🎯</div>
+                    <div class="up-info">
+                        <div class="up-title">Chute Preciso <span class="up-lvl" id="lvl-penalty">NV 1</span></div>
+                        <div class="up-desc">Mira de pênalti mais estável e bomba indefensável</div>
+                        <div class="up-bar"><div class="up-bar-fill" id="bar-penalty" style="width: 20%"></div></div>
+                    </div>
+                    <button class="up-btn" id="btn-up-penalty" type="button">🪙 100</button>
+                </div>
+            </div>
+
+            <button id="shop-close-btn" class="btn btn-ghost" type="button">VOLTAR AO MENU</button>
+        </div>
+    </div>
+
+    <!-- MODAL DE COMO JOGAR -->
     <div id="tutorial-modal" class="screen overlay hidden">
         <div class="modal tut-modal">
             <div class="tut-badge">🏆 MANUAL DO CRAQUE</div>
@@ -146,35 +225,35 @@
                     <div class="tut-ico">👆</div>
                     <div class="tut-desc">
                         <b>Drible Livre</b>
-                        <span>Arraste o dedo ou mouse em qualquer lugar da tela para guiar o camisa 10 e fintar os zagueiros.</span>
+                        <span>Arraste o dedo em qualquer lugar da tela para guiar o camisa 10 e desviar dos carrinhos.</span>
                     </div>
                 </div>
                 <div class="tut-item">
                     <div class="tut-ico">⏱️</div>
                     <div class="tut-desc">
                         <b>Câmera Lenta (Slow-Mo)</b>
-                        <span>Toque no botão azul para desacelerar o tempo e achar brechas na marcação fechada.</span>
+                        <span>Toque ou segure o botão azul para desacelerar o tempo e achar brechas na zaga.</span>
                     </div>
                 </div>
                 <div class="tut-item">
                     <div class="tut-ico">🌀</div>
                     <div class="tut-desc">
                         <b>Giro 360° Acrobático</b>
-                        <span>Use o botão roxo para girar imune a desarmes e deixar o carrinho do adversário no chão!</span>
+                        <span>Aperte o botão roxo para girar imune a desarmes e deixar o zagueiro no chão!</span>
                     </div>
                 </div>
                 <div class="tut-item">
-                    <div class="tut-ico">🧃👟</div>
+                    <div class="tut-ico">🧃👟🧲</div>
                     <div class="tut-desc">
-                        <b>Power-Ups no Gramado</b>
-                        <span>Pegue isotônicos para encher a barra de Slow-Mo e a Chuteira de Ouro para supervelocidade.</span>
+                        <b>Power-Ups & Moedas</b>
+                        <span>Colete isotônicos (+slow), chuteiras de ouro (supervelocidade) e trilhas de moedas para evoluir!</span>
                     </div>
                 </div>
                 <div class="tut-item">
                     <div class="tut-ico">🥅</div>
                     <div class="tut-desc">
-                        <b>Disputa de Pênalti</b>
-                        <span>A cada 1000m, encare o goleiro! Arraste a mira para os cantos e solte a bomba para passar de fase.</span>
+                        <b>Pênalti a cada 1000m</b>
+                        <span>Chegue à área, encare o goleiro bem de perto, mire nos cantos e solte a bomba!</span>
                     </div>
                 </div>
             </div>
@@ -209,6 +288,7 @@
                 <div><b id="o-best">0</b><span>RECORDE</span></div>
             </div>
             <button id="again-btn" class="btn btn-primary" type="button">🔄 JOGAR DE NOVO</button>
+            <button id="over-shop-btn" class="btn btn-gold" type="button">🛒 LOJA DE UPGRADES</button>
             <button id="over-menu" class="btn btn-ghost" type="button">🏠 MENU / TROCAR TIME</button>
         </div>
     </div>
