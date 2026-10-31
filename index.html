@@ -10,6 +10,8 @@
     <meta name="apple-mobile-web-app-title" content="Craque Hero">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -56,18 +58,18 @@
         </div>
     </div>
 
-    <!-- Botões de ação -->
+    <!-- Botões de ação durante a corrida -->
     <div id="controls" class="hidden">
-        <button id="slow-btn" class="act-btn act-slow" aria-label="Câmera lenta">
-            <span class="ico">⏱️</span><span class="txt">SEGURE</span>
+        <button id="slow-btn" class="act-btn act-slow" aria-label="Câmera lenta" type="button">
+            <span class="ico">⏱️</span><span class="txt">SLOW</span>
         </button>
-        <button id="spin-btn" class="act-btn act-spin" aria-label="Giro">
+        <button id="spin-btn" class="act-btn act-spin" aria-label="Giro" type="button">
             <span class="ico">🌀</span><span class="txt">GIRO</span>
             <div id="spin-shade"></div>
         </button>
     </div>
 
-    <!-- Avisos -->
+    <!-- Avisos de Dribles e Banner Central -->
     <div id="toast" class="hidden"><div id="toast-title"></div><div id="toast-sub"></div></div>
     <div id="banner" class="hidden">
         <div id="banner-kicker"></div>
@@ -75,19 +77,10 @@
         <div id="banner-sub"></div>
     </div>
 
-    <!-- Pênalti -->
+    <!-- Interface da Disputa de Pênalti -->
     <div id="penalty-ui" class="hidden">
-        <div class="pen-hint"><b>PÊNALTI!</b> Arraste para mirar • solte para chutar</div>
-        <button id="shoot-btn" class="btn btn-primary">⚽ CHUTAR</button>
-    </div>
-
-    <!-- Tutorial -->
-    <div id="tutorial" class="hidden">
-        <div class="tut-hand">👆</div>
-        <div class="tut-text">
-            Arraste em qualquer lugar da tela para <b>driblar</b><br>
-            <small>⏱️ segure para câmera lenta • 🌀 giro para escapar<br>🧃 isotônico enche o slow • 👟 chuteira de ouro = supervelocidade</small>
-        </div>
+        <div class="pen-hint">🎯 <b>DISPUTA DE PÊNALTI!</b> Arraste para mirar nos cantos</div>
+        <button id="shoot-btn" class="btn btn-primary btn-kick" type="button">⚽ BATER O PÊNALTI!</button>
     </div>
 
     <div id="fade"></div>
@@ -95,11 +88,14 @@
     <!-- MENU PRINCIPAL -->
     <div id="menu" class="screen">
         <div class="menu-inner">
-            <div class="logo">
-                <span class="logo-ball">⚽</span>
-                <h1>CRAQUE<br><span>HERO</span></h1>
+            <div class="logo-box">
+                <div class="logo-top-badge">⭐ EDIÇÃO BRASIL 2026 ⭐</div>
+                <div class="logo">
+                    <img class="logo-app-icon" src="icon.svg" alt="Craque Hero Ícone" width="56" height="56">
+                    <h1>CRAQUE<br><span>HERO</span></h1>
+                </div>
+                <p class="tagline">Drible a zaga. Chegue na área. Faça o gol.</p>
             </div>
-            <p class="tagline">Drible a zaga. Chegue na área. Faça o gol.</p>
 
             <div class="card preview-card">
                 <canvas id="preview"></canvas>
@@ -122,11 +118,14 @@
             </div>
 
             <div class="card">
-                <div class="card-title">Escolha seu time</div>
+                <div class="card-title">Escolha seu time do coração</div>
                 <div id="team-grid"></div>
             </div>
 
-            <button id="play-btn" class="btn btn-primary btn-big">JOGAR</button>
+            <div class="menu-actions">
+                <button id="play-btn" class="btn btn-primary btn-big" type="button">⚽ JOGAR</button>
+                <button id="how-to-play-btn" class="btn btn-ghost" type="button">📖 COMO JOGAR</button>
+            </div>
 
             <div class="menu-footer">
                 <span id="menu-record">🏆 Recorde: 0</span>
@@ -135,17 +134,66 @@
         </div>
     </div>
 
-    <!-- PAUSA -->
-    <div id="pause-screen" class="screen overlay hidden">
-        <div class="modal">
-            <h2>PAUSADO</h2>
-            <button id="resume-btn" class="btn btn-primary">▶ CONTINUAR</button>
-            <button id="pause-sound" class="btn btn-ghost">🔊 Som</button>
-            <button id="pause-menu" class="btn btn-ghost">🏠 MENU</button>
+    <!-- MODAL DE COMO JOGAR (ANTES DE ENTRAR EM CAMPO) -->
+    <div id="tutorial-modal" class="screen overlay hidden">
+        <div class="modal tut-modal">
+            <div class="tut-badge">🏆 MANUAL DO CRAQUE</div>
+            <h2>COMO JOGAR</h2>
+            <p class="tut-subtitle">Aprenda os dribles antes de a bola rolar!</p>
+
+            <div class="tut-cards">
+                <div class="tut-item">
+                    <div class="tut-ico">👆</div>
+                    <div class="tut-desc">
+                        <b>Drible Livre</b>
+                        <span>Arraste o dedo ou mouse em qualquer lugar da tela para guiar o camisa 10 e fintar os zagueiros.</span>
+                    </div>
+                </div>
+                <div class="tut-item">
+                    <div class="tut-ico">⏱️</div>
+                    <div class="tut-desc">
+                        <b>Câmera Lenta (Slow-Mo)</b>
+                        <span>Toque no botão azul para desacelerar o tempo e achar brechas na marcação fechada.</span>
+                    </div>
+                </div>
+                <div class="tut-item">
+                    <div class="tut-ico">🌀</div>
+                    <div class="tut-desc">
+                        <b>Giro 360° Acrobático</b>
+                        <span>Use o botão roxo para girar imune a desarmes e deixar o carrinho do adversário no chão!</span>
+                    </div>
+                </div>
+                <div class="tut-item">
+                    <div class="tut-ico">🧃👟</div>
+                    <div class="tut-desc">
+                        <b>Power-Ups no Gramado</b>
+                        <span>Pegue isotônicos para encher a barra de Slow-Mo e a Chuteira de Ouro para supervelocidade.</span>
+                    </div>
+                </div>
+                <div class="tut-item">
+                    <div class="tut-ico">🥅</div>
+                    <div class="tut-desc">
+                        <b>Disputa de Pênalti</b>
+                        <span>A cada 1000m, encare o goleiro! Arraste a mira para os cantos e solte a bomba para passar de fase.</span>
+                    </div>
+                </div>
+            </div>
+
+            <button id="start-match-btn" class="btn btn-primary btn-big" type="button">⚽ ENTRAR EM CAMPO!</button>
         </div>
     </div>
 
-    <!-- FIM DE JOGO -->
+    <!-- TELA DE PAUSA -->
+    <div id="pause-screen" class="screen overlay hidden">
+        <div class="modal">
+            <h2>PAUSADO</h2>
+            <button id="resume-btn" class="btn btn-primary" type="button">▶ CONTINUAR</button>
+            <button id="pause-sound" class="btn btn-ghost" type="button">🔊 Som</button>
+            <button id="pause-menu" class="btn btn-ghost" type="button">🏠 MENU</button>
+        </div>
+    </div>
+
+    <!-- TELA DE FIM DE JOGO -->
     <div id="over-screen" class="screen overlay hidden">
         <div class="modal">
             <div id="new-record" class="new-record hidden">🏆 NOVO RECORDE!</div>
@@ -160,8 +208,8 @@
                 <div><b id="o-coins">0</b><span>MOEDAS</span></div>
                 <div><b id="o-best">0</b><span>RECORDE</span></div>
             </div>
-            <button id="again-btn" class="btn btn-primary">🔄 JOGAR DE NOVO</button>
-            <button id="over-menu" class="btn btn-ghost">🏠 MENU / TROCAR TIME</button>
+            <button id="again-btn" class="btn btn-primary" type="button">🔄 JOGAR DE NOVO</button>
+            <button id="over-menu" class="btn btn-ghost" type="button">🏠 MENU / TROCAR TIME</button>
         </div>
     </div>
 </div>

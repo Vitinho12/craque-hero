@@ -1,17 +1,71 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <radialGradient id="turf" cx="50%" cy="50%" r="50%">
+    <linearGradient id="grassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#22c55e"/>
       <stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="50%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    <radialGradient id="ballShade" cx="35%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="70%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#64748b"/>
     </radialGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000" flood-opacity="0.4"/>
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000000" flood-opacity="0.45"/>
     </filter>
   </defs>
-  <rect width="512" height="512" rx="120" fill="url(#turf)"/>
-  <circle cx="256" cy="256" r="170" fill="#ffffff" filter="url(#shadow)"/>
-  <polygon points="256,150 318,195 294,268 218,268 194,195" fill="#1e293b"/>
-  <polygon points="256,362 300,320 355,335 345,390 280,410" fill="#1e293b"/>
-  <polygon points="120,290 160,250 150,195 100,210 90,265" fill="#1e293b"/>
-  <polygon points="392,290 352,250 362,195 412,210 422,265" fill="#1e293b"/>
+
+  <!-- Base App Icon com cantos arredondados -->
+  <rect width="512" height="512" rx="115" fill="url(#grassGrad)"/>
+
+  <!-- Faixas verticais sutis de corte de grama -->
+  <rect x="64" width="64" height="512" fill="rgba(255, 255, 255, 0.06)"/>
+  <rect x="192" width="64" height="512" fill="rgba(255, 255, 255, 0.06)"/>
+  <rect x="320" width="64" height="512" fill="rgba(255, 255, 255, 0.06)"/>
+  <rect x="448" width="64" height="512" fill="rgba(255, 255, 255, 0.06)"/>
+
+  <!-- Aro circular dourado -->
+  <circle cx="256" cy="270" r="185" fill="none" stroke="url(#goldGrad)" stroke-width="14" filter="url(#dropShadow)"/>
+
+  <!-- Estrela Dourada no topo -->
+  <g transform="translate(256, 75)" filter="url(#dropShadow)">
+    <polygon points="0,-45 13,-14 45,-14 19,6 29,38 0,18 -29,38 -19,6 -45,-14 -13,-14" fill="url(#goldGrad)"/>
+  </g>
+
+  <!-- Bola de Futebol central -->
+  <g transform="translate(256, 270)" filter="url(#dropShadow)">
+    <circle cx="0" cy="0" r="140" fill="url(#ballShade)"/>
+    <circle cx="0" cy="0" r="140" fill="none" stroke="#1e293b" stroke-width="4"/>
+
+    <!-- Pentágono central -->
+    <polygon points="0,-36 34,-11 21,30 -21,30 -34,-11" fill="#0f172a"/>
+
+    <!-- Gomos externos -->
+    <!-- Topo -->
+    <line x1="0" y1="-36" x2="0" y2="-90" stroke="#1e293b" stroke-width="5"/>
+    <polygon points="-40,-130 0,-90 40,-130 0,-140" fill="#0f172a"/>
+
+    <!-- Topo Direito -->
+    <line x1="34" y1="-11" x2="80" y2="-38" stroke="#1e293b" stroke-width="5"/>
+    <polygon points="80,-38 125,-15 138,-55 95,-75" fill="#0f172a"/>
+
+    <!-- Inferior Direito -->
+    <line x1="21" y1="30" x2="62" y2="75" stroke="#1e293b" stroke-width="5"/>
+    <polygon points="62,75 60,125 105,115 118,70" fill="#0f172a"/>
+
+    <!-- Inferior Esquerdo -->
+    <line x1="-21" y1="30" x2="-62" y2="75" stroke="#1e293b" stroke-width="5"/>
+    <polygon points="-62,75 -60,125 -105,115 -118,70" fill="#0f172a"/>
+
+    <!-- Topo Esquerdo -->
+    <line x1="-34" y1="-11" x2="-80" y2="-38" stroke="#1e293b" stroke-width="5"/>
+    <polygon points="-80,-38 -125,-15 -138,-55 -95,-75" fill="#0f172a"/>
+
+    <!-- Brilho 3D suave no topo da bola -->
+    <ellipse cx="-45" cy="-55" rx="40" ry="22" transform="rotate(-30, -45, -55)" fill="rgba(255, 255, 255, 0.45)"/>
+  </g>
 </svg>

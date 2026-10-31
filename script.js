@@ -11,6 +11,7 @@
 const TEAMS = [
     { id: 'brasil', name: 'Brasil', primary: '#facc15', secondary: '#15803d', shorts: '#1d4ed8', socks: '#ffffff', stripes: false },
     { id: 'flamengo', name: 'Flamengo', primary: '#dc2626', secondary: '#0f172a', shorts: '#ffffff', socks: '#dc2626', stripes: 'horizontal' },
+    { id: 'vasco', name: 'Vasco', primary: '#0f172a', secondary: '#ffffff', shorts: '#ffffff', socks: '#0f172a', stripes: 'sash' },
     { id: 'corinthians', name: 'Corinthians', primary: '#ffffff', secondary: '#0f172a', shorts: '#0f172a', socks: '#ffffff', stripes: false },
     { id: 'palmeiras', name: 'Palmeiras', primary: '#15803d', secondary: '#ffffff', shorts: '#ffffff', socks: '#15803d', stripes: false },
     { id: 'saopaulo', name: 'São Paulo', primary: '#ffffff', secondary: '#dc2626', shorts: '#ffffff', socks: '#ffffff', stripes: 'chest' },
@@ -213,7 +214,9 @@ const bannerSubEl = document.getElementById('banner-sub');
 
 const penaltyUiEl = document.getElementById('penalty-ui');
 const shootBtn = document.getElementById('shoot-btn');
-const tutorialEl = document.getElementById('tutorial');
+const tutorialModal = document.getElementById('tutorial-modal');
+const startMatchBtn = document.getElementById('start-match-btn');
+const howToPlayBtn = document.getElementById('how-to-play-btn');
 const fadeEl = document.getElementById('fade');
 
 const menuScreen = document.getElementById('menu');
@@ -322,6 +325,8 @@ let goals = 0;
 let slowEnergy = 100;
 let isSlowMo = false;
 let timeScale = 1.0;
+const SLOWMO_DRAIN_RATE = 28;     // Drena ~28% por segundo de slow-mo
+const SLOWMO_RECOVERY_RATE = 22;  // Recupera ~22% por segundo
 
 // Super velocidade (Chuteira de ouro)
 let superSpeedTimer = 0;
@@ -362,7 +367,7 @@ let particles = [];
 let crowd = [];
 
 // Pênalti
-const goalPost = { y: 70, width: 280, height: 90 };
+const goalPost = { y: 70, width: 280, height: 90, postThickness: 6 };
 const goalie = { x: 0, y: 0, vx: 140, diveDir: 0, diveProgress: 0 };
 const penaltyAim = { x: 0, y: 0, sweep: 0, isManual: false };
 const penBall = { x: 0, y: 0, scale: 1.0, vx: 0, vy: 0 };
@@ -469,6 +474,22 @@ function drawSoccerPlayer(c, x, y, opts = {}) {
             c.fillRect(-14, -6, 28, 4);
             c.fillStyle = '#0f172a';
             c.fillRect(-14, -2, 28, 4);
+        } else if (team.stripes === 'sash') {
+            // Faixa diagonal cruzando a camisa (Vasco da Gama)
+            c.save();
+            c.beginPath();
+            c.roundRect(-14, -14, 28, 20, 5);
+            c.clip();
+            c.strokeStyle = team.secondary;
+            c.lineWidth = 6;
+            c.beginPath();
+            c.moveTo(-16, 8);
+            c.lineTo(16, -14);
+            c.stroke();
+            // Cruz de Malta vermelha no peito
+            c.fillStyle = '#dc2626';
+            c.fillRect(-2, -5, 4, 4);
+            c.restore();
         } else {
             // Detalhe elegante nos ombros
             c.fillStyle = team.secondary;
@@ -530,6 +551,20 @@ function drawMiniJersey(team, c) {
         c.fillStyle = team.secondary;
         c.fillRect(-12, -7, 24, 4);
         c.fillRect(-12, 0, 24, 4);
+    } else if (team.stripes === 'sash') {
+        c.save();
+        c.beginPath();
+        c.roundRect(-12, -12, 24, 20, 4);
+        c.clip();
+        c.strokeStyle = team.secondary;
+        c.lineWidth = 5;
+        c.beginPath();
+        c.moveTo(-14, 8);
+        c.lineTo(14, -12);
+        c.stroke();
+        c.fillStyle = '#dc2626';
+        c.fillRect(-2, -4, 4, 4);
+        c.restore();
     } else {
         c.fillStyle = team.secondary;
         c.fillRect(-12, -12, 4, 8);
@@ -672,16 +707,19 @@ function renderPreview() {
 function resize() {
     const rect = appEl.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    width = rect.width;
-    height = rect.height;
+    width = Math.ceil(rect.width);
+    height = Math.ceil(rect.height);
 
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
 
     pitchMargin = Math.max(30, Math.round(width * 0.1));
     goalPost.width = Math.min(300, width * 0.82);
+    goalPost.postThickness = 6;
 
     initCrowd();
 }
@@ -786,14 +824,14 @@ function updateParticles(dt) {
 // =========================================================
 function drawPitch() {
     ctx.fillStyle = '#1e824c';
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, -10, width, height + 30);
 
     // Faixas verticais de corte da grama
     const stripeCount = 6;
     const stripeW = (width - pitchMargin * 2) / stripeCount;
     for (let i = 0; i < stripeCount; i++) {
         ctx.fillStyle = i % 2 === 0 ? '#1b7845' : '#229954';
-        ctx.fillRect(pitchMargin + i * stripeW, 0, stripeW, height);
+        ctx.fillRect(pitchMargin + i * stripeW, -10, stripeW, height + 30);
     }
 
     // Torcida
@@ -803,10 +841,10 @@ function drawPitch() {
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 3.5;
     ctx.beginPath();
-    ctx.moveTo(pitchMargin, 0);
-    ctx.lineTo(pitchMargin, height);
-    ctx.moveTo(width - pitchMargin, 0);
-    ctx.lineTo(width - pitchMargin, height);
+    ctx.moveTo(pitchMargin, -10);
+    ctx.lineTo(pitchMargin, height + 20);
+    ctx.moveTo(width - pitchMargin, -10);
+    ctx.lineTo(width - pitchMargin, height + 20);
     ctx.stroke();
 
     // Linhas contínuas de futebol: meio-campo e círculo central
@@ -834,8 +872,8 @@ function drawPitch() {
 
 function drawCrowd() {
     ctx.fillStyle = '#0f1712';
-    ctx.fillRect(0, 0, pitchMargin, height);
-    ctx.fillRect(width - pitchMargin, 0, pitchMargin, height);
+    ctx.fillRect(0, -10, pitchMargin, height + 30);
+    ctx.fillRect(width - pitchMargin, -10, pitchMargin, height + 30);
 
     const t = performance.now() * 0.005;
     for (let fan of crowd) {
@@ -1206,10 +1244,19 @@ function updatePlayer(dt) {
 // =========================================================
 // DISPUTA DE PÊNALTI REALISTA (TOTALMENTE DESOBSTRUÍDA)
 // =========================================================
+function executePenaltyKick() {
+    if (gameState !== STATE.PENALTY_AIM) return;
+    gameState = STATE.PENALTY_RUNUP;
+    penRunUp = 0;
+    penaltyUiEl.classList.add('hidden');
+    audio.playKick();
+}
+
 function startPenaltySetup() {
     gameState = STATE.PENALTY_AIM;
     isSlowMo = false;
     timeScale = 1.0;
+    penRunUp = 0;
     defenders = [];
     pickups = [];
 
@@ -1228,16 +1275,20 @@ function startPenaltySetup() {
     penBall.x = width / 2;
     penBall.y = height - 170;
     penBall.scale = 1.0;
+    penBall.vx = 0;
+    penBall.vy = 0;
 
     // Trave visível no topo
     goalPost.y = 70;
+    goalPost.postThickness = 6;
 
     // Goleiro na linha
     goalie.x = width / 2;
     goalie.y = goalPost.y + goalPost.height - 18;
-    // Goleiro começa suave no nível 1 (amigável!) e fica mais esperto a cada fase
-    goalie.vx = 80 + (stage - 1) * 25;
+    // Goleiro começa suave no nível 1 (amigável!) e fica mais ágil com o passar das fases
+    goalie.vx = 75 + Math.min(stage - 1, 6) * 18;
     goalie.diveProgress = 0;
+    goalie.diveDir = 0;
 
     // Mira inicial no centro
     penaltyAim.sweep = 0;
@@ -1251,7 +1302,7 @@ function startPenaltySetup() {
 
 function updatePenalty(dt) {
     if (gameState === STATE.PENALTY_AIM) {
-        // Mira oscilando entre os cantos da trave
+        // Mira oscilando entre os cantos da trave se não for manual
         if (!penaltyAim.isManual) {
             penaltyAim.sweep += 2.8 * dt;
             const goalL = (width - goalPost.width) / 2 + 25;
@@ -1275,7 +1326,7 @@ function updatePenalty(dt) {
         addGrassDust(penBall.x, penBall.y, 1);
 
         // Goleiro salta
-        goalie.x += goalie.diveDir * (180 + stage * 20) * dt;
+        goalie.x += goalie.diveDir * (160 + Math.min(stage, 6) * 18) * dt;
 
         checkPenaltyCollision();
     }
@@ -1284,23 +1335,27 @@ function updatePenalty(dt) {
 function startPenaltyShot() {
     const dx = penaltyAim.x - penBall.x;
     const dy = penaltyAim.y - penBall.y;
-    const dist = Math.hypot(dx, dy);
-    const speed = 650;
+    const dist = Math.hypot(dx, dy) || 1;
+    const speed = 640;
 
     penBall.vx = (dx / dist) * speed;
     penBall.vy = (dy / dist) * speed;
 
     // Goleiro reage (tem um pequeno atraso humano!)
     const aimSide = penaltyAim.x > width / 2 ? 1 : -1;
-    // No nível 1, goleiro erra o canto 60% das vezes se você chutar nos cantos!
-    const gkGuessedRight = Math.random() < (0.35 + (stage - 1) * 0.1);
+    // No nível 1, goleiro quase sempre pula pro lado errado (20% de acerto). Fases mais altas aumentam até máx 60%.
+    const guessChance = Math.min(0.60, 0.20 + (stage - 1) * 0.08);
+    const gkGuessedRight = Math.random() < guessChance;
     goalie.diveDir = gkGuessedRight ? aimSide : -aimSide;
 }
 
 function checkPenaltyCollision() {
     const distToGk = Math.hypot(penBall.x - goalie.x, penBall.y - goalie.y);
-    if (distToGk < 32) {
+    // Raio de defesa justo (22px na fase 1)
+    const saveRadius = Math.min(26, 22 + (stage - 1) * 1);
+    if (distToGk < saveRadius) {
         screenShake = 14;
+        audio.playWhistle(true);
         triggerGameOver('O GOLEIRO ESPALMOU NO ÂNGULO!');
         return;
     }
@@ -1309,10 +1364,11 @@ function checkPenaltyCollision() {
     const goalR = goalL + goalPost.width;
 
     if (penBall.y <= goalPost.y + goalPost.height) {
-        if (penBall.x >= goalL + 12 && penBall.x <= goalR - 12) {
+        if (penBall.x >= goalL + 10 && penBall.x <= goalR - 10) {
             handleGoalSuccess();
         } else {
             screenShake = 12;
+            audio.playWhistle(true);
             triggerGameOver('CHUTOU NA TRAVE E FOI PRA FORA!');
         }
     }
@@ -1497,19 +1553,29 @@ function showBanner(type, kicker, title, sub) {
 // CONTROLES DE PARTIDA (SLOW-MO E GIRO)
 // =========================================================
 function setSlowMo(active) {
-    if (gameState !== STATE.RUNNING) return;
-    if (active && slowEnergy <= 10) return;
-    if (isSlowMo !== active) {
-        isSlowMo = active;
-        appEl.classList.toggle('slowmo', active);
-        slowBtn.classList.toggle('held', active);
+    if (active) {
+        if (gameState !== STATE.RUNNING) return;
+        if (slowEnergy <= 8) return;
+        if (!isSlowMo) {
+            isSlowMo = true;
+            if (appEl) appEl.classList.add('slowmo');
+            if (slowBtn) slowBtn.classList.add('held');
+            audio.playWhoosh();
+        }
+    } else {
+        if (isSlowMo) {
+            isSlowMo = false;
+            timeScale = 1.0;
+            if (appEl) appEl.classList.remove('slowmo');
+            if (slowBtn) slowBtn.classList.remove('held');
+        }
     }
 }
 
 function updateSlowMoState(dt) {
     if (isSlowMo && slowEnergy > 0) {
         slowEnergy -= SLOWMO_DRAIN_RATE * dt;
-        timeScale = 0.45;
+        timeScale = 0.42;
         if (slowEnergy <= 0) {
             slowEnergy = 0;
             setSlowMo(false);
@@ -1520,7 +1586,7 @@ function updateSlowMoState(dt) {
             slowEnergy = Math.min(100, slowEnergy + SLOWMO_RECOVERY_RATE * dt);
         }
     }
-    slowFillEl.style.width = `${slowEnergy}%`;
+    if (slowFillEl) slowFillEl.style.width = `${Math.max(0, Math.min(100, slowEnergy))}%`;
 }
 
 function triggerSpin() {
@@ -1674,10 +1740,6 @@ function startGame() {
     player.targetY = player.y;
 
     audio.playWhistle();
-
-    // Tutorial temporário na primeira vez
-    tutorialEl.classList.remove('hidden');
-    setTimeout(() => tutorialEl.classList.add('hidden'), 3500);
 }
 
 function triggerGameOver(reason) {
@@ -1819,21 +1881,105 @@ window.addEventListener('keyup', (e) => {
 });
 
 // Botões da Partida
-slowBtn.addEventListener('touchstart', (e) => { e.stopPropagation(); setSlowMo(true); });
-slowBtn.addEventListener('touchend', (e) => { e.stopPropagation(); setSlowMo(false); });
-slowBtn.addEventListener('mousedown', () => setSlowMo(true));
-slowBtn.addEventListener('mouseup', () => setSlowMo(false));
-slowBtn.addEventListener('mouseleave', () => setSlowMo(false));
+let slowHeld = false;
+let slowPressStartTime = 0;
 
-spinBtn.addEventListener('click', (e) => { e.stopPropagation(); triggerSpin(); });
-spinBtn.addEventListener('touchend', (e) => { e.stopPropagation(); triggerSpin(); });
+function onSlowPress(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    slowHeld = true;
+    slowPressStartTime = performance.now();
+    setSlowMo(true);
+}
 
-shootBtn.addEventListener('click', (e) => { e.stopPropagation(); executePenaltyKick(); });
-shootBtn.addEventListener('touchend', (e) => { e.stopPropagation(); executePenaltyKick(); });
+function onSlowRelease(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    const duration = performance.now() - slowPressStartTime;
+    // Se o usuário deu apenas um toque rápido (< 240ms), faz toggle
+    if (duration > 240) {
+        setSlowMo(false);
+    }
+    slowHeld = false;
+}
+
+if (slowBtn) {
+    slowBtn.addEventListener('pointerdown', onSlowPress);
+    slowBtn.addEventListener('pointerup', onSlowRelease);
+    slowBtn.addEventListener('pointercancel', () => { slowHeld = false; setSlowMo(false); });
+    slowBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSlowMo(!isSlowMo);
+    });
+}
+
+if (spinBtn) {
+    spinBtn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerSpin();
+    });
+    spinBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerSpin();
+    });
+}
+
+if (shootBtn) {
+    shootBtn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        executePenaltyKick();
+    });
+    shootBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        executePenaltyKick();
+    });
+}
+
+// Global release para garantir que nunca fique congelado
+window.addEventListener('pointerup', () => {
+    isMouseDown = false;
+    if (slowHeld) {
+        slowHeld = false;
+        setSlowMo(false);
+    }
+});
+window.addEventListener('mouseup', () => {
+    isMouseDown = false;
+    if (slowHeld) {
+        slowHeld = false;
+        setSlowMo(false);
+    }
+});
+window.addEventListener('touchend', () => {
+    isTouching = false;
+    if (slowHeld) {
+        slowHeld = false;
+        setSlowMo(false);
+    }
+});
+window.addEventListener('touchcancel', () => {
+    isTouching = false;
+    slowHeld = false;
+    setSlowMo(false);
+});
+window.addEventListener('blur', () => {
+    slowHeld = false;
+    setSlowMo(false);
+});
 
 pauseBtn.addEventListener('click', () => {
     if (gameState === STATE.RUNNING) {
         gameState = STATE.PAUSED;
+        setSlowMo(false);
         pauseScreen.classList.remove('hidden');
     }
 });
@@ -1847,7 +1993,29 @@ pauseSoundBtn.addEventListener('click', () => {
 });
 pauseMenuBtn.addEventListener('click', openMenu);
 
-playBtn.addEventListener('click', startGame);
+function requestStartGame() {
+    const seenTutorial = localStorage.getItem('craque_seen_tutorial');
+    if (!seenTutorial && tutorialModal) {
+        tutorialModal.classList.remove('hidden');
+    } else {
+        startGame();
+    }
+}
+
+if (playBtn) playBtn.addEventListener('click', requestStartGame);
+if (howToPlayBtn) {
+    howToPlayBtn.addEventListener('click', () => {
+        if (tutorialModal) tutorialModal.classList.remove('hidden');
+    });
+}
+if (startMatchBtn) {
+    startMatchBtn.addEventListener('click', () => {
+        localStorage.setItem('craque_seen_tutorial', 'true');
+        if (tutorialModal) tutorialModal.classList.add('hidden');
+        startGame();
+    });
+}
+
 againBtn.addEventListener('click', startGame);
 overMenuBtn.addEventListener('click', openMenu);
 
