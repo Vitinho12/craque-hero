@@ -1,6 +1,6 @@
 /* ========================================================
-   TOUCHDOWN CRAQUE HERO - RETRO ARCADE CSS
-   Estilo fiel ao clássico Touchdown Hero da Cherrypick Games
+   CRAQUE HERO - MODERN SOCCER ARCADE CSS
+   Mobile-First, Design 100% Futebol, Sem Jardas Americanas
    ======================================================== */
 
 * {
@@ -17,7 +17,7 @@ html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background-color: #0c1117;
+    background-color: #0b1016;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -42,11 +42,9 @@ html, body {
     display: block;
     width: 100%;
     height: 100%;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
 }
 
-/* Efeito de Vinheta e Luzes de Estádio */
+/* Efeito de Estádio e Holofotes */
 #stadium-overlay {
     position: absolute;
     top: 0;
@@ -55,16 +53,16 @@ html, body {
     height: 100%;
     pointer-events: none;
     background: radial-gradient(
-        ellipse 92% 85% at 50% 50%,
+        ellipse 94% 88% at 50% 50%,
         transparent 65%,
-        rgba(5, 16, 10, 0.4) 85%,
-        rgba(2, 8, 4, 0.8) 100%
+        rgba(5, 16, 10, 0.35) 85%,
+        rgba(2, 8, 4, 0.75) 100%
     );
     z-index: 5;
 }
 
 /* ========================================================
-   HUD RETRÔ SUPERIOR (BARRA VERMELHA TOUCHDOWN HERO)
+   HUD SUPERIOR DA PARTIDA
    ======================================================== */
 #arcade-hud {
     position: absolute;
@@ -78,15 +76,16 @@ html, body {
     gap: 8px;
     pointer-events: none;
     z-index: 20;
+    transition: opacity 0.3s ease;
 }
 
-/* Barra Vermelha de Stamina / Slow-Mo (Idêntica à do Touchdown Hero) */
+/* Barra de Câmera Lenta (Slow-Mo) */
 #stamina-container {
     display: flex;
     align-items: center;
     gap: 6px;
-    width: 60%;
-    max-width: 220px;
+    width: 55%;
+    max-width: 200px;
 }
 
 .stamina-label {
@@ -99,13 +98,12 @@ html, body {
 
 .stamina-frame {
     flex: 1;
-    height: 14px;
+    height: 12px;
     background: #111827;
     border: 2px solid #ffffff;
     border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 10px rgba(239, 68, 68, 0.4);
-    position: relative;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 8px rgba(239, 68, 68, 0.4);
 }
 
 #stamina-bar {
@@ -116,7 +114,7 @@ html, body {
     transition: width 0.08s linear;
 }
 
-/* Linha de Placar e Metros */
+/* Placar de Futebol */
 #top-stats-row {
     width: 100%;
     display: flex;
@@ -126,7 +124,7 @@ html, body {
 }
 
 .arcade-card {
-    background: rgba(13, 22, 16, 0.9);
+    background: rgba(11, 20, 14, 0.9);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     padding: 4px 10px;
@@ -148,10 +146,9 @@ html, body {
 
 #meters-txt {
     font-family: 'Impact', 'Arial Black', sans-serif;
-    font-size: 18px;
+    font-size: 17px;
     color: #facc15;
     line-height: 1.1;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
 #meters-txt small {
@@ -178,7 +175,7 @@ html, body {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: rgba(13, 22, 16, 0.9);
+    background: rgba(11, 20, 14, 0.9);
     border: 1px solid rgba(255, 255, 255, 0.25);
     font-size: 16px;
     display: flex;
@@ -229,8 +226,8 @@ html, body {
    ======================================================== */
 #action-controls {
     position: absolute;
-    bottom: 24px;
-    right: 16px;
+    bottom: 22px;
+    right: 14px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -240,8 +237,8 @@ html, body {
 
 .arcade-action-btn {
     position: relative;
-    width: 68px;
-    height: 68px;
+    width: 66px;
+    height: 66px;
     border-radius: 50%;
     border: 3px solid #ffffff;
     display: flex;
@@ -269,7 +266,7 @@ html, body {
 }
 
 .btn-icon {
-    font-size: 24px;
+    font-size: 22px;
     line-height: 1;
     margin-bottom: 2px;
 }
@@ -279,7 +276,6 @@ html, body {
     font-size: 9px;
     letter-spacing: 0.8px;
     color: #ffffff;
-    text-shadow: 0 1px 2px #000;
 }
 
 #spin-cooldown-shade {
@@ -294,7 +290,7 @@ html, body {
 }
 
 /* ========================================================
-   INTERFACE EXCLUSIVA DO PÊNALTI
+   INTERFACE DO PÊNALTI (COMPACTA - NUNCA COBRE A TRAVE!)
    ======================================================== */
 #penalty-ui {
     position: absolute;
@@ -305,56 +301,49 @@ html, body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 60px 16px 36px 16px;
     pointer-events: none;
     z-index: 50;
-    animation: fadeIn 0.3s ease-out;
+    animation: fadeIn 0.25s ease-out;
 }
 
 #penalty-ui.hidden {
     display: none;
 }
 
-.penalty-banner {
-    background: linear-gradient(135deg, rgba(234, 179, 8, 0.96), rgba(234, 88, 12, 0.96));
-    border: 3px solid #ffffff;
-    border-radius: 18px;
-    padding: 16px 14px;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 25px rgba(234, 179, 8, 0.5);
-    animation: popIn 0.4s ease-out;
+/* Header compacto no topo livre para visualização completa da trave */
+.penalty-compact-header {
+    margin-top: 14px;
+    align-self: center;
+    background: rgba(11, 20, 14, 0.92);
+    border: 2px solid #facc15;
+    border-radius: 24px;
+    padding: 6px 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), 0 0 15px rgba(250, 204, 21, 0.4);
+    pointer-events: none;
 }
 
-.penalty-tag {
-    display: inline-block;
-    background: rgba(0, 0, 0, 0.35);
-    color: #fef08a;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 1.5px;
-    padding: 2px 10px;
-    border-radius: 20px;
-    margin-bottom: 4px;
-}
-
-.penalty-title {
+.penalty-badge {
     font-family: 'Impact', 'Arial Black', sans-serif;
-    font-size: 26px;
+    color: #facc15;
+    font-size: 13px;
+    letter-spacing: 1px;
+}
+
+.penalty-sub {
     color: #ffffff;
-    letter-spacing: 1.5px;
-    text-shadow: 2px 2px 0 #78350f;
-    margin-bottom: 2px;
-}
-
-.penalty-instruction {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
-    color: #451a03;
 }
 
-.penalty-controls {
+.penalty-footer {
+    width: 100%;
     display: flex;
     justify-content: center;
+    margin-bottom: 26px;
     pointer-events: auto;
 }
 
@@ -370,13 +359,13 @@ html, body {
     font-size: 24px;
     letter-spacing: 2px;
     cursor: pointer;
-    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.6), 0 4px 0 #14532d;
+    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.7), 0 4px 0 #14532d;
     animation: kickPulse 0.9s infinite alternate;
 }
 
 .btn-penalty-shoot:active {
     transform: translateY(4px);
-    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.6);
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.7);
 }
 
 @keyframes kickPulse {
@@ -387,7 +376,7 @@ html, body {
 /* Dica de Início */
 #hint-bubble {
     position: absolute;
-    bottom: 110px;
+    bottom: 105px;
     left: 5%;
     width: 90%;
     text-align: center;
@@ -446,7 +435,6 @@ html, body {
 .modal-badge {
     font-size: 50px;
     margin-bottom: 6px;
-    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
 }
 
 .modal-title {

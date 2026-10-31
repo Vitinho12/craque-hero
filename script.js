@@ -1,14 +1,13 @@
 /**
- * Touchdown Craque Hero - JavaScript Engine
- * Estilo Retro Arcade 16-Bit inspirado no Touchdown Hero
- * Controle Livre 2D, Câmera Lenta (Slow-Mo), Fintas Telegrafadas,
- * Disputa de Pênalti Real com Jogador Parado na Marca da Cal.
+ * Craque Hero - 100% Futebol Brasileiro (Soccer)
+ * Mobile-First, Controle Livre 2D, Câmera Lenta (Slow-Mo),
+ * Zagueiros Naturais com Marcação de Futebol e Pênalti Realista.
  */
 
 // ========================================================
-// SISTEMA DE ÁUDIO RETRÔ PROCEDURAL (Web Audio API)
+// SISTEMA DE ÁUDIO SINTETIZADO (Web Audio API)
 // ========================================================
-class RetroAudio {
+class SoccerAudio {
     constructor() {
         this.ctx = null;
         this.enabled = true;
@@ -36,8 +35,8 @@ class RetroAudio {
             const gain = this.ctx.createGain();
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(160, this.ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.14);
-            gain.gain.setValueAtTime(0.6, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(32, this.ctx.currentTime + 0.14);
+            gain.gain.setValueAtTime(0.65, this.ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.14);
             osc.connect(gain);
             gain.connect(this.ctx.destination);
@@ -52,11 +51,11 @@ class RetroAudio {
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
             osc.type = 'sine';
-            const startF = active ? 400 : 200;
-            const endF = active ? 200 : 400;
+            const startF = active ? 360 : 180;
+            const endF = active ? 180 : 360;
             osc.frequency.setValueAtTime(startF, this.ctx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(endF, this.ctx.currentTime + 0.12);
-            gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
             osc.connect(gain);
             gain.connect(this.ctx.destination);
@@ -72,8 +71,8 @@ class RetroAudio {
             const gain = this.ctx.createGain();
             osc.type = 'sine';
             osc.frequency.setValueAtTime(320, this.ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(850, this.ctx.currentTime + 0.18);
-            gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.18);
+            gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.18);
             osc.connect(gain);
             gain.connect(this.ctx.destination);
@@ -88,7 +87,7 @@ class RetroAudio {
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
             osc.type = 'square';
-            osc.frequency.setValueAtTime(950, this.ctx.currentTime);
+            osc.frequency.setValueAtTime(880, this.ctx.currentTime);
             gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
             osc.connect(gain);
@@ -141,7 +140,7 @@ class RetroAudio {
     }
 }
 
-const sfx = new RetroAudio();
+const sfx = new SoccerAudio();
 
 // ========================================================
 // ELEMENTOS DO DOM
@@ -150,6 +149,7 @@ const container = document.getElementById('game-container');
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+const arcadeHud = document.getElementById('arcade-hud');
 const staminaBar = document.getElementById('stamina-bar');
 const metersTxt = document.getElementById('meters-txt');
 const scoreTxt = document.getElementById('score-txt');
@@ -157,6 +157,7 @@ const goalsTxt = document.getElementById('goals-txt');
 const soundBtn = document.getElementById('sound-btn');
 const comboPopup = document.getElementById('combo-popup');
 
+const actionControls = document.getElementById('action-controls');
 const slowmoBtn = document.getElementById('slowmo-btn');
 const spinBtn = document.getElementById('spin-btn');
 const spinCooldownShade = document.getElementById('spin-cooldown-shade');
@@ -176,28 +177,27 @@ const resBest = document.getElementById('res-best');
 const retryBtn = document.getElementById('retry-btn');
 
 // ========================================================
-// ESTADO GLOBAL DO JOGO
+// MODOS DE JOGO
 // ========================================================
-const GAME_MODE = {
-    RUNNER: 'RUNNER',               // Corrida com fintas
-    PENALTY_SETUP: 'PENALTY_SETUP', // Transição e posicionamento na marca da cal
+const MODE = {
+    RUNNER: 'RUNNER',               // Corrida no campo com dribles
     PENALTY_AIM: 'PENALTY_AIM',     // Jogador PARADO mirando na trave
-    PENALTY_RUNUP: 'PENALTY_RUNUP', // Corrida do jogador até a bola
-    PENALTY_SHOT: 'PENALTY_SHOT',   // Bola voando em 3D rumo ao gol
+    PENALTY_RUNUP: 'PENALTY_RUNUP', // Corrida de aproximação até a bola
+    PENALTY_SHOT: 'PENALTY_SHOT',   // Chute com bola voando em 3D
     CELEBRATION: 'CELEBRATION',     // Comemoração de gol
-    GAME_OVER: 'GAME_OVER'          // Derrota
+    GAME_OVER: 'GAME_OVER'
 };
 
-let currentMode = GAME_MODE.RUNNER;
+let currentMode = MODE.RUNNER;
 let animationFrameId = null;
 
 let logicalWidth = 0;
 let logicalHeight = 0;
 let pitchMargin = 38;
 
-// Progresso e Dificuldade Equilibrada
+// Métricas de Partida
 let meters = 0;
-let targetMeters = 1000; // Objetivo do Pênalti
+let targetMeters = 1000;
 let score = 0;
 let goalsCount = 0;
 let dribblesCount = 0;
@@ -205,21 +205,20 @@ let highScore = parseInt(localStorage.getItem('craque_touchdown_highscore') || '
 
 // Câmera Lenta (Slow-Mo) e Stamina
 let isSlowMoActive = false;
-let slowMoStamina = 100; // 0 a 100
-const SLOWMO_DRAIN_RATE = 28; // % por segundo
-const SLOWMO_RECOVERY_RATE = 18; // % por segundo de recarga
+let slowMoStamina = 100;
+const SLOWMO_DRAIN_RATE = 28;
+const SLOWMO_RECOVERY_RATE = 18;
 let timeScale = 1.0;
 
-// Velocidade Base de Rolagem
+// Velocidade do Campo
 let baseScrollSpeed = 2.2;
 let currentScrollSpeed = 2.2;
 let fieldScrollY = 0;
 let screenShake = 0;
-
 let lastTimestamp = 0;
 
 // ========================================================
-// JOGADOR (CRAQUE DO DRIBLE)
+// CRAQUE DO FUTEBOL (JOGADOR)
 // ========================================================
 const player = {
     x: 0,
@@ -228,77 +227,70 @@ const player = {
     targetY: 0,
     radius: 17,
     runCycle: 0,
+    ballRotation: 0,
     isSpinning: false,
     spinAngle: 0,
     isInvulnerable: false,
     invulnerableTimer: 0,
 
-    // Pênalti: Posição do chute e mira
-    penaltyStartX: 0,
-    penaltyStartY: 0,
+    // Pênalti
     runUpProgress: 0
 };
 
-// Habilidade Especial de Giro (Spin Move)
+// Habilidade de Giro 360°
 const SPIN_COOLDOWN_MS = 4500;
 let lastSpinTime = -9999;
 
 // ========================================================
-// ZAGUEIROS (COM IA DE PERSEGUIÇÃO E FINTA)
+// ZAGUEIROS (IA DE MARCAÇÃO DE FUTEBOL)
 // ========================================================
 let defenders = [];
-let nextDefenderSpawnMeters = 70; // Próximo spawn calculado
+let nextDefenderSpawnMeters = 70;
 
-const DEFENDER_TYPES = {
-    PATROL: 'PATROL',   // Zagueiro de posicionamento tático lateral
-    CHASER: 'CHASER',   // Zagueiro perseguidor (alerta '!' e bote com inércia)
-    SLIDER: 'SLIDER'    // Zagueiro que dá carrinho rasgando a grama
+const DEFENDER_STYLES = {
+    JOCKEY: 'JOCKEY',     // Volante/zagueiro cercando e fechando a linha de passe
+    CHASER: 'CHASER',     // Zagueiro que persegue com inércia e alerta '!'
+    SLIDER: 'SLIDER'      // Zagueiro de carrinho deslizante na grama
 };
 
 // ========================================================
-// TRAVE, MIRA E GOLEIRO (DISPUTA DE PÊNALTI)
+// TRAVE DO GOL, GOLEIRO E PÊNALTI REALISTA
 // ========================================================
 const goalPost = {
-    y: 85,
-    width: 260,
-    height: 75,
+    y: 65,            // Posição no topo (totalmente visível!)
+    width: 270,
+    height: 85,
     postThickness: 8
 };
 
 const penaltyAim = {
     x: 0,
     y: 0,
-    targetX: 0,
-    targetY: 0,
     sweepAngle: 0
 };
 
 const goalkeeper = {
     x: 0,
     y: 0,
-    vx: 2.2,
-    state: 'READY', // READY, DIVING
-    diveDir: 0,     // -1 (esq), 1 (dir)
+    vx: 2.3,
+    state: 'READY',
+    diveDir: 0,
     diveProgress: 0
 };
 
-// Bola no Pênalti
 const penaltyBall = {
     x: 0,
     y: 0,
     scale: 1.0,
-    targetX: 0,
-    targetY: 0,
     vx: 0,
     vy: 0
 };
 
-// Partículas e Torcida Pixel
 let particles = [];
-let spectators = [];
+let crowdSupporters = [];
 
 // ========================================================
-// REDIMENSIONAMENTO E INICIALIZAÇÃO DO CANVAS
+// INICIALIZAÇÃO E RESPONSIVIDADE
 // ========================================================
 function resizeCanvas() {
     const rect = container.getBoundingClientRect();
@@ -313,35 +305,33 @@ function resizeCanvas() {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
 
-    pitchMargin = Math.max(34, Math.round(logicalWidth * 0.11));
+    pitchMargin = Math.max(32, Math.round(logicalWidth * 0.1));
 
-    if (currentMode === GAME_MODE.RUNNER && !player.x) {
+    if (currentMode === MODE.RUNNER && !player.x) {
         player.x = logicalWidth / 2;
         player.y = logicalHeight - 130;
         player.targetX = player.x;
         player.targetY = player.y;
     }
 
-    goalPost.width = Math.min(290, logicalWidth * 0.74);
+    goalPost.width = Math.min(300, logicalWidth * 0.82);
 
-    initSpectators();
+    initCrowd();
 }
 
-function initSpectators() {
-    spectators = [];
+function initCrowd() {
+    crowdSupporters = [];
     const colors = ['#facc15', '#38bdf8', '#22c55e', '#ef4444', '#ffffff', '#fb923c'];
-    const count = 30;
-    for (let i = 0; i < count; i++) {
-        // Arquibancada esquerda
-        spectators.push({
+    const rows = 32;
+    for (let i = 0; i < rows; i++) {
+        crowdSupporters.push({
             side: 'left',
             x: Math.random() * (pitchMargin - 16) + 8,
             baseY: i * 36,
             color: colors[Math.floor(Math.random() * colors.length)],
             offset: Math.random() * Math.PI * 2
         });
-        // Arquibancada direita
-        spectators.push({
+        crowdSupporters.push({
             side: 'right',
             x: logicalWidth - pitchMargin + 8 + Math.random() * (pitchMargin - 16),
             baseY: i * 36,
@@ -352,7 +342,7 @@ function initSpectators() {
 }
 
 // ========================================================
-// SISTEMA DE PARTÍCULAS (GRAMA E CONFETES)
+// PARTÍCULAS VISUAIS (GRAMA E CONFETES)
 // ========================================================
 function spawnGrassDust(x, y, count = 3) {
     for (let i = 0; i < count; i++) {
@@ -442,14 +432,14 @@ function updateAndDrawParticles() {
 }
 
 // ========================================================
-// RENDERIZAÇÃO RETRÔ DO CAMPO (ESTILO TOUCHDOWN HERO)
+// RENDERIZAÇÃO DO CAMPO 100% FUTEBOL (SEM JARDAS AMERICANAS)
 // ========================================================
 function drawPitch() {
-    // 1. Gramado Arcade Verde
+    // 1. Gramado de Futebol Verde
     ctx.fillStyle = '#1e824c';
     ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
-    // 2. Faixas de Corte da Grama Verticais
+    // 2. Faixas de Corte da Grama Verticais (Estilo Europeu)
     const stripeCount = 6;
     const stripeW = (logicalWidth - pitchMargin * 2) / stripeCount;
     for (let i = 0; i < stripeCount; i++) {
@@ -457,12 +447,12 @@ function drawPitch() {
         ctx.fillRect(pitchMargin + i * stripeW, 0, stripeW, logicalHeight);
     }
 
-    // 3. Arquibancada e Torcida
-    drawSpectators();
+    // 3. Arquibancada e Torcida Lateral
+    drawCrowd();
 
     // 4. Linhas Laterais Brancas (Touchlines)
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.moveTo(pitchMargin, 0);
     ctx.lineTo(pitchMargin, logicalHeight);
@@ -470,51 +460,49 @@ function drawPitch() {
     ctx.lineTo(logicalWidth - pitchMargin, logicalHeight);
     ctx.stroke();
 
-    // 5. Linhas de Jardas/Metros e Hash Marks (Estilo Touchdown Hero)
-    const meterSpacing = 160;
-    const offset = fieldScrollY % meterSpacing;
+    // 5. Linhas de Futebol em Movimento: Círculo Central, Linhas de Meio-Campo e Áreas
+    // (Apenas marcações autênticas de futebol, NADA de jardas de futebol americano!)
+    const pitchSpacing = 380;
+    const offset = fieldScrollY % pitchSpacing;
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.lineWidth = 2.5;
 
-    for (let y = -meterSpacing + offset; y < logicalHeight + meterSpacing; y += meterSpacing) {
-        // Linha contínua
+    for (let y = -pitchSpacing + offset; y < logicalHeight + pitchSpacing; y += pitchSpacing) {
+        // Linha de Meio-Campo
         ctx.beginPath();
         ctx.moveTo(pitchMargin, y);
         ctx.lineTo(logicalWidth - pitchMargin, y);
         ctx.stroke();
 
-        // Hash marks pontilhadas no centro
-        const hashW = 8;
-        const centerX = logicalWidth / 2;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.fillRect(centerX - 35, y - 2, hashW, 4);
-        ctx.fillRect(centerX + 35 - hashW, y - 2, hashW, 4);
+        // Círculo Central Oficial
+        ctx.beginPath();
+        ctx.arc(logicalWidth / 2, y, 48, 0, Math.PI * 2);
+        ctx.stroke();
 
-        // Número do metro pintado na grama (ex: 100m, 200m...)
-        const lineMeters = Math.floor((meters + (logicalHeight - y) * 0.4) / 50) * 50;
-        if (lineMeters > 0 && lineMeters < targetMeters) {
-            ctx.save();
-            ctx.font = 'bold 15px "Impact", sans-serif';
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`${lineMeters}`, pitchMargin + 26, y - 10);
-            ctx.fillText(`${lineMeters}`, logicalWidth - pitchMargin - 26, y - 10);
-            ctx.restore();
-        }
+        // Ponto da Marca Central
+        ctx.beginPath();
+        ctx.arc(logicalWidth / 2, y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fill();
+
+        // Arcos de Escanteio nas laterais
+        ctx.beginPath();
+        ctx.arc(pitchMargin, y, 12, 0, Math.PI * 0.5);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(logicalWidth - pitchMargin, y, 12, Math.PI * 0.5, Math.PI);
+        ctx.stroke();
     }
 }
 
-function drawSpectators() {
-    // Zona de arquibancada
+function drawCrowd() {
     ctx.fillStyle = '#0f1712';
     ctx.fillRect(0, 0, pitchMargin, logicalHeight);
     ctx.fillRect(logicalWidth - pitchMargin, 0, pitchMargin, logicalHeight);
 
-    // Torcedores pixelados pulando
     const t = performance.now() * 0.006;
-    for (let fan of spectators) {
+    for (let fan of crowdSupporters) {
         const bob = Math.sin(t + fan.offset) * 4;
         const drawY = (fan.baseY + fieldScrollY * 0.8) % logicalHeight;
 
@@ -526,28 +514,25 @@ function drawSpectators() {
 }
 
 // ========================================================
-// CONTROLE E RENDERIZAÇÃO DO JOGADOR RETRÔ
+// O CRAQUE DO DRIBLE (JOGADOR COM ANIMAÇÃO DE FUTEBOL)
 // ========================================================
 function updatePlayer(delta) {
-    if (currentMode === GAME_MODE.RUNNER) {
-        // Interpolação suave em direção ao alvo 2D
+    if (currentMode === MODE.RUNNER) {
         const lerp = 0.28;
         player.x += (player.targetX - player.x) * lerp;
         player.y += (player.targetY - player.y) * lerp;
 
-        // Limita dentro do campo
         const minX = pitchMargin + player.radius + 4;
         const maxX = logicalWidth - pitchMargin - player.radius - 4;
         player.x = Math.max(minX, Math.min(maxX, player.x));
 
-        // Limites verticais
         const minY = logicalHeight * 0.16;
         const maxY = logicalHeight - player.radius - 16;
         player.y = Math.max(minY, Math.min(maxY, player.y));
 
         player.runCycle += 0.24 * timeScale;
+        player.ballRotation += (currentScrollSpeed * 0.06) * timeScale;
 
-        // Giro 360° (Spin Move)
         if (player.isSpinning) {
             player.spinAngle += 0.45;
             spawnSpinTrail(player.x, player.y);
@@ -556,17 +541,15 @@ function updatePlayer(delta) {
                 player.isInvulnerable = false;
             }
         }
-    } else if (currentMode === GAME_MODE.PENALTY_RUNUP) {
-        // Animação de corrida até a bola no pênalti
-        player.runUpProgress += 0.08;
+    } else if (currentMode === MODE.PENALTY_RUNUP) {
+        // Corrida de aproximação até a marca da cal
+        player.runUpProgress += 0.09;
         player.runCycle += 0.35;
-        // Avança até a bola
-        player.x += (penaltyBall.x - player.x) * 0.15;
-        player.y += ((penaltyBall.y + 14) - player.y) * 0.15;
+        player.x += (penaltyBall.x - player.x) * 0.16;
+        player.y += ((penaltyBall.y + 14) - player.y) * 0.16;
 
         if (player.runUpProgress >= 1.0) {
-            // Chute disparado!
-            currentMode = GAME_MODE.PENALTY_SHOT;
+            currentMode = MODE.PENALTY_SHOT;
             sfx.playKick();
             startPenaltyShot();
         }
@@ -587,27 +570,39 @@ function drawPlayer() {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.fill();
 
-    // Pernas animadas
-    const legSwing = currentMode === GAME_MODE.PENALTY_AIM ? 0 : Math.sin(player.runCycle) * 8;
+    // Pernas animadas com calção e meiões
+    const legSwing = (currentMode === MODE.PENALTY_AIM) ? 0 : Math.sin(player.runCycle) * 8;
+
+    // Calção azul
     ctx.fillStyle = '#0284c7';
-    ctx.fillRect(-10, 4 + legSwing, 6, 12);
-    ctx.fillRect(4, 4 - legSwing, 6, 12);
+    ctx.fillRect(-10, 4 + legSwing, 6, 8);
+    ctx.fillRect(4, 4 - legSwing, 6, 8);
 
-    // Chuteiras brancas
+    // Meiões brancos de futebol
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(-11, 14 + legSwing, 8, 4);
-    ctx.fillRect(3, 14 - legSwing, 8, 4);
+    ctx.fillRect(-10, 11 + legSwing, 6, 6);
+    ctx.fillRect(4, 11 - legSwing, 6, 6);
 
-    // Corpo / Camisa Azul do Craque
+    // Chuteiras pretas
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-11, 15 + legSwing, 8, 4);
+    ctx.fillRect(3, 15 - legSwing, 8, 4);
+
+    // Camisa de Futebol (Azul com detalhes brancos e gola)
     ctx.fillStyle = '#0284c7';
     ctx.beginPath();
-    ctx.roundRect(-14, -14, 28, 22, 5);
+    ctx.roundRect(-14, -14, 28, 20, 5);
     ctx.fill();
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.8;
     ctx.stroke();
 
-    // Número 10 branco nas costas
+    // Faixa no ombro / manga
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-14, -12, 4, 10);
+    ctx.fillRect(10, -12, 4, 10);
+
+    // Número 10 nas costas
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
@@ -620,7 +615,7 @@ function drawPlayer() {
     ctx.fillStyle = '#f59e0b';
     ctx.fill();
 
-    // Cabelo / Faixa
+    // Cabelo do craque
     ctx.fillStyle = '#1e293b';
     ctx.beginPath();
     ctx.arc(0, -22, 8, Math.PI, Math.PI * 2);
@@ -628,26 +623,27 @@ function drawPlayer() {
 
     ctx.restore();
 
-    // A Bola ⚽ na corrida normal
-    if (currentMode === GAME_MODE.RUNNER) {
+    // A Bola ⚽ Rola nos pés do jogador na corrida
+    if (currentMode === MODE.RUNNER) {
         const ballOffset = 18 + Math.sin(player.runCycle) * 3;
         ctx.save();
+        ctx.translate(player.x, player.y + ballOffset);
+        ctx.rotate(player.ballRotation);
         ctx.font = '26px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('⚽', player.x, player.y + ballOffset);
+        ctx.fillText('⚽', 0, 0);
         ctx.restore();
     }
 }
 
 // ========================================================
-// IA DOS ZAGUEIROS (EQUILIBRADA & DESAFIADORA)
+// ZAGUEIROS ADVERSÁRIOS (MOVIMENTO NATURAL DE FUTEBOL)
 // ========================================================
 function spawnDefendersIfNeeded() {
-    if (currentMode !== GAME_MODE.RUNNER) return;
+    if (currentMode !== MODE.RUNNER) return;
 
     if (meters >= nextDefenderSpawnMeters) {
-        // Dificuldade progressiva conforme os metros avançam
         const maxOnScreen = meters > 600 ? 4 : 3;
 
         if (defenders.length < maxOnScreen) {
@@ -655,32 +651,30 @@ function spawnDefendersIfNeeded() {
             const lane = Math.floor(Math.random() * 3);
             const posX = pitchMargin + (lane + 0.5) * laneWidth;
 
-            // Variedade de tipos baseada no progresso dos metros
-            let type = DEFENDER_TYPES.PATROL;
+            let style = DEFENDER_STYLES.JOCKEY;
             const rand = Math.random();
 
             if (meters > 500 && rand < 0.45) {
-                type = DEFENDER_TYPES.SLIDER;
+                style = DEFENDER_STYLES.SLIDER;
             } else if (meters > 250 && rand < 0.75) {
-                type = DEFENDER_TYPES.CHASER;
+                style = DEFENDER_STYLES.CHASER;
             }
 
             defenders.push({
                 x: posX,
                 y: -60,
                 radius: 19,
-                type: type,
+                style: style,
                 state: 'NORMAL',
                 stateTimer: 0,
-                vx: (Math.random() < 0.5 ? 1 : -1) * (1.3 + (meters / 1000) * 0.5),
+                vx: (Math.random() < 0.5 ? 1 : -1) * (1.2 + (meters / 1000) * 0.45),
                 tackleVx: 0,
                 tackleVy: 0,
-                jerseyNumber: [88, 52, 99, 44][Math.floor(Math.random() * 4)],
+                jerseyNumber: [3, 4, 5, 2][Math.floor(Math.random() * 4)],
                 dodged: false
             });
         }
 
-        // Espaçamento calculado entre spawns para garantir jogabilidade justa
         const spacing = Math.max(140, 220 - (meters / 1000) * 80);
         nextDefenderSpawnMeters = meters + spacing;
     }
@@ -689,19 +683,19 @@ function spawnDefendersIfNeeded() {
 function updateDefenders(delta) {
     for (let i = defenders.length - 1; i >= 0; i--) {
         const d = defenders[i];
-
-        // Descida com suporte ao Slow-Mo
         d.y += currentScrollSpeed * timeScale;
 
         const distToPlayer = Math.hypot(player.x - d.x, player.y - d.y);
 
-        // LÓGICA DE IA
-        if (d.type === DEFENDER_TYPES.PATROL) {
+        // Movimento natural de marcação de futebol:
+        if (d.style === DEFENDER_STYLES.JOCKEY) {
+            // Marcação em linha / fechando o ângulo da bola
             d.x += d.vx * timeScale;
             if (d.x < pitchMargin + 24 || d.x > logicalWidth - pitchMargin - 24) {
                 d.vx *= -1;
             }
-        } else if (d.type === DEFENDER_TYPES.CHASER) {
+        } else if (d.style === DEFENDER_STYLES.CHASER) {
+            // Zagueiro de bote direto
             if (d.state === 'NORMAL') {
                 if (distToPlayer < 240 && d.y < player.y) {
                     d.state = 'ALERT';
@@ -712,7 +706,7 @@ function updateDefenders(delta) {
                 if (performance.now() > d.stateTimer) {
                     d.state = 'TACKLING';
                     const angle = Math.atan2(player.y - d.y, player.x - d.x);
-                    const spd = 3.8 + (meters / 1000) * 0.8;
+                    const spd = 3.6 + (meters / 1000) * 0.7;
                     d.tackleVx = Math.cos(angle) * spd;
                     d.tackleVy = Math.sin(angle) * spd;
                     d.stateTimer = performance.now() + 850;
@@ -727,7 +721,8 @@ function updateDefenders(delta) {
                     d.stateTimer = performance.now() + 800;
                 }
             }
-        } else if (d.type === DEFENDER_TYPES.SLIDER) {
+        } else if (d.style === DEFENDER_STYLES.SLIDER) {
+            // Zagueiro de carrinho lateral na bola
             if (d.state === 'NORMAL') {
                 if (distToPlayer < 220 && Math.abs(player.y - d.y) < 180) {
                     d.state = 'ALERT';
@@ -738,7 +733,7 @@ function updateDefenders(delta) {
                 if (performance.now() > d.stateTimer) {
                     d.state = 'TACKLING';
                     const dirX = player.x > d.x ? 1 : -1;
-                    d.tackleVx = dirX * (4.5 + (meters / 1000) * 0.8);
+                    d.tackleVx = dirX * (4.4 + (meters / 1000) * 0.7);
                     d.stateTimer = performance.now() + 650;
                 }
             } else if (d.state === 'TACKLING') {
@@ -751,7 +746,7 @@ function updateDefenders(delta) {
             }
         }
 
-        // BÔNUS POR DRIBLE BEM SUCEDIDO
+        // Finta / Drible
         if (!d.dodged && (d.y > player.y + 24 || d.state === 'STUMBLED')) {
             d.dodged = true;
             dribblesCount++;
@@ -761,10 +756,10 @@ function updateDefenders(delta) {
             showComboPopup('⚡ DRIBLE! +150');
         }
 
-        // COLISÃO
-        if (currentMode === GAME_MODE.RUNNER && !player.isInvulnerable) {
+        // Colisão com o zagueiro
+        if (currentMode === MODE.RUNNER && !player.isInvulnerable) {
             if (distToPlayer < player.radius + d.radius - 4) {
-                triggerGameOver('O ZAGUEIRO ADVERSÁRIO DESARMOU VOCÊ!', '💥');
+                triggerGameOver('O ZAGUEIRO DESARMOU VOCÊ!', '💥');
                 return;
             }
         }
@@ -778,32 +773,36 @@ function updateDefenders(delta) {
 function drawDefenders() {
     ctx.save();
     for (let d of defenders) {
-        // Sombra
         ctx.beginPath();
         ctx.ellipse(d.x, d.y + 16, 20, 8, 0, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.fill();
 
-        // Camisa Vermelha com detalhes brancos estilo Touchdown Hero
+        // Uniforme de Zagueiro (Vermelho e Preto listrado de clube)
         ctx.fillStyle = d.state === 'STUMBLED' ? '#7f1d1d' : '#dc2626';
         ctx.beginPath();
-        ctx.roundRect(d.x - 16, d.y - 14, 32, 24, 6);
+        ctx.roundRect(d.x - 16, d.y - 14, 32, 22, 5);
         ctx.fill();
-        ctx.strokeStyle = '#ef4444';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1.8;
         ctx.stroke();
 
-        // Ombros / Detalhe Branco
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(d.x - 16, d.y - 14, 6, 8);
-        ctx.fillRect(d.x + 10, d.y - 14, 6, 8);
+        // Calção preto de futebol
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(d.x - 12, d.y + 8, 8, 7);
+        ctx.fillRect(d.x + 4, d.y + 8, 8, 7);
+
+        // Meiões vermelhos
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(d.x - 12, d.y + 15, 8, 4);
+        ctx.fillRect(d.x + 4, d.y + 15, 8, 4);
 
         // Número da camisa
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 12px sans-serif';
+        ctx.font = 'bold 11px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(d.jerseyNumber, d.x, d.y - 1);
+        ctx.fillText(d.jerseyNumber, d.x, d.y - 2);
 
         // Cabeça
         ctx.beginPath();
@@ -811,7 +810,7 @@ function drawDefenders() {
         ctx.fillStyle = '#f59e0b';
         ctx.fill();
 
-        // Alerta '!' quando detecta o jogador
+        // Balão de Alerta '!' quando acende
         if (d.state === 'ALERT') {
             ctx.save();
             ctx.fillStyle = '#ef4444';
@@ -830,7 +829,6 @@ function drawDefenders() {
             ctx.restore();
         }
 
-        // Atordoado ao errar o bote
         if (d.state === 'STUMBLED') {
             ctx.font = '15px sans-serif';
             ctx.textAlign = 'center';
@@ -846,7 +844,7 @@ function drawDefenders() {
 function updateSlowMo(delta) {
     if (isSlowMoActive && slowMoStamina > 0) {
         slowMoStamina -= (SLOWMO_DRAIN_RATE * (delta / 1000));
-        timeScale = 0.45; // 50% de velocidade
+        timeScale = 0.45;
         if (slowMoStamina <= 0) {
             slowMoStamina = 0;
             setSlowMo(false);
@@ -861,8 +859,8 @@ function updateSlowMo(delta) {
 }
 
 function setSlowMo(active) {
-    if (currentMode !== GAME_MODE.RUNNER) return;
-    if (active && slowMoStamina <= 10) return; // Mínimo para ativar
+    if (currentMode !== MODE.RUNNER) return;
+    if (active && slowMoStamina <= 10) return;
 
     if (isSlowMoActive !== active) {
         isSlowMoActive = active;
@@ -871,7 +869,7 @@ function setSlowMo(active) {
 }
 
 function triggerSpin() {
-    if (currentMode !== GAME_MODE.RUNNER) return;
+    if (currentMode !== MODE.RUNNER) return;
     const now = performance.now();
     if (now - lastSpinTime < SPIN_COOLDOWN_MS) return;
 
@@ -892,64 +890,62 @@ function updateSpinCooldown() {
 }
 
 // ========================================================
-// DISPUTA DE PÊNALTI REAL (JOGADOR PARADO NA MARCA DA CAL)
+// PÊNALTI REALISTA (TOTALMENTE DESOBSTRUÍDO E VISÍVEL!)
 // ========================================================
-function startPenaltySetup() {
-    currentMode = GAME_MODE.PENALTY_SETUP;
+function startPenaltyPhase() {
+    currentMode = MODE.PENALTY_AIM;
     setSlowMo(false);
     defenders = [];
 
-    // O jogador se posiciona exatamente atrás da marca da cal
-    player.penaltyStartX = logicalWidth / 2;
-    player.penaltyStartY = logicalHeight - 120;
-    player.x = player.penaltyStartX;
-    player.y = player.penaltyStartY;
+    // Oculta HUD de corrida para não poluir
+    arcadeHud.style.opacity = '0';
+    actionControls.style.display = 'none';
+
+    // Jogador PARADO na marca da cal
+    player.x = logicalWidth / 2;
+    player.y = logicalHeight - 125;
     player.targetX = player.x;
     player.targetY = player.y;
 
-    // A bola de futebol parada na marca do pênalti
+    // Bola parada na marca do pênalti
     penaltyBall.x = logicalWidth / 2;
-    penaltyBall.y = logicalHeight - 175;
+    penaltyBall.y = logicalHeight - 170;
     penaltyBall.scale = 1.0;
 
-    // Trave no topo
-    goalPost.y = 85;
+    // Trave do Gol no topo com espaço livre
+    goalPost.y = 65;
 
     // Goleiro na linha
     goalkeeper.x = logicalWidth / 2;
     goalkeeper.y = goalPost.y + goalPost.height - 18;
-    goalkeeper.vx = 2.4 + Math.min(2.2, goalsCount * 0.5);
+    goalkeeper.vx = 2.4 + Math.min(2.0, goalsCount * 0.45);
     goalkeeper.state = 'READY';
 
     // Alvo de mira inicial
     penaltyAim.sweepAngle = 0;
     penaltyAim.x = logicalWidth / 2;
-    penaltyAim.y = goalPost.y + goalPost.height * 0.4;
+    penaltyAim.y = goalPost.y + goalPost.height * 0.5;
 
     sfx.playWhistle(true);
-
-    // Mostra UI do Pênalti
     penaltyUi.classList.remove('hidden');
-    currentMode = GAME_MODE.PENALTY_AIM;
 }
 
 function updatePenaltyAim(delta) {
-    if (currentMode === GAME_MODE.PENALTY_AIM) {
-        // Alvo de mira oscila suavemente de um canto ao outro da trave
+    if (currentMode === MODE.PENALTY_AIM) {
+        // Alvo de mira oscila suavemente entre a gaveta esquerda e direita
         penaltyAim.sweepAngle += 0.045;
-        const goalLeft = (logicalWidth - goalPost.width) / 2 + 35;
-        const goalRight = goalLeft + goalPost.width - 70;
+        const goalLeft = (logicalWidth - goalPost.width) / 2 + 25;
+        const goalRight = goalLeft + goalPost.width - 50;
         const center = (goalLeft + goalRight) / 2;
         const radius = (goalRight - goalLeft) / 2;
 
         penaltyAim.x = center + Math.sin(penaltyAim.sweepAngle) * radius;
-        // Altura oscila entre a gaveta e o chão
-        penaltyAim.y = goalPost.y + 20 + (Math.sin(penaltyAim.sweepAngle * 1.5) + 1) * 20;
+        penaltyAim.y = goalPost.y + 18 + (Math.sin(penaltyAim.sweepAngle * 1.5) + 1) * 22;
 
         // Goleiro se movimenta pulando de um lado para o outro na linha do gol
         goalkeeper.x += goalkeeper.vx;
-        const gkMinX = (logicalWidth - goalPost.width) / 2 + 35;
-        const gkMaxX = gkMinX + goalPost.width - 70;
+        const gkMinX = (logicalWidth - goalPost.width) / 2 + 30;
+        const gkMaxX = gkMinX + goalPost.width - 60;
         if (goalkeeper.x < gkMinX) {
             goalkeeper.x = gkMinX;
             goalkeeper.vx = Math.abs(goalkeeper.vx);
@@ -957,14 +953,12 @@ function updatePenaltyAim(delta) {
             goalkeeper.x = gkMaxX;
             goalkeeper.vx = -Math.abs(goalkeeper.vx);
         }
-    } else if (currentMode === GAME_MODE.PENALTY_SHOT) {
-        // Bola voando rumo à trave
+    } else if (currentMode === MODE.PENALTY_SHOT) {
         penaltyBall.x += penaltyBall.vx;
         penaltyBall.y += penaltyBall.vy;
-        penaltyBall.scale = Math.max(0.65, penaltyBall.scale - 0.015); // Efeito de profundidade 3D
+        penaltyBall.scale = Math.max(0.65, penaltyBall.scale - 0.015);
         spawnGrassDust(penaltyBall.x, penaltyBall.y, 1);
 
-        // Goleiro salta na direção prevista do chute
         goalkeeper.x += goalkeeper.diveDir * 4.2;
 
         checkPenaltyCollision();
@@ -972,16 +966,15 @@ function updatePenaltyAim(delta) {
 }
 
 function executePenaltyKick() {
-    if (currentMode !== GAME_MODE.PENALTY_AIM) return;
+    if (currentMode !== MODE.PENALTY_AIM) return;
 
-    // Jogador inicia a corrida até a bola
-    currentMode = GAME_MODE.PENALTY_RUNUP;
+    // Jogador inicia a corrida de aproximação
+    currentMode = MODE.PENALTY_RUNUP;
     player.runUpProgress = 0;
     penaltyUi.classList.add('hidden');
 }
 
 function startPenaltyShot() {
-    // Calcula vetor da bola em direção ao alvo mirado
     const dx = penaltyAim.x - penaltyBall.x;
     const dy = penaltyAim.y - penaltyBall.y;
     const dist = Math.hypot(dx, dy);
@@ -990,7 +983,6 @@ function startPenaltyShot() {
     penaltyBall.vx = (dx / dist) * speed;
     penaltyBall.vy = (dy / dist) * speed;
 
-    // Goleiro decide o lado do salto (com base na reação)
     const goalieDistToAim = penaltyAim.x - goalkeeper.x;
     goalkeeper.state = 'DIVING';
     goalkeeper.diveDir = goalieDistToAim > 0 ? 1 : -1;
@@ -1011,10 +1003,8 @@ function checkPenaltyCollision() {
 
     if (penaltyBall.y <= goalPost.y + goalPost.height) {
         if (penaltyBall.x >= goalLeft + 12 && penaltyBall.x <= goalRight - 12) {
-            // GOOOOOOOOOOOL!
             handleGoalSuccess();
         } else {
-            // Fora / Trave
             screenShake = 12;
             triggerGameOver('CHUTOU NA TRAVE E FOI PRA FORA!', '🥅');
         }
@@ -1022,7 +1012,7 @@ function checkPenaltyCollision() {
 }
 
 function handleGoalSuccess() {
-    currentMode = GAME_MODE.CELEBRATION;
+    currentMode = MODE.CELEBRATION;
 
     goalsCount++;
     score += 500;
@@ -1034,8 +1024,7 @@ function handleGoalSuccess() {
     screenShake = 16;
 
     showComboPopup('⚽ GOOOOOOL! +500 PTS');
-
-    targetMeters += 1000; // Próximo aos 2000m, 3000m...
+    targetMeters += 1000;
 
     setTimeout(() => {
         resumeRunnerAfterPenalty();
@@ -1043,7 +1032,10 @@ function handleGoalSuccess() {
 }
 
 function resumeRunnerAfterPenalty() {
-    currentMode = GAME_MODE.RUNNER;
+    currentMode = MODE.RUNNER;
+    arcadeHud.style.opacity = '1';
+    actionControls.style.display = 'flex';
+
     player.x = logicalWidth / 2;
     player.y = logicalHeight - 130;
     player.targetX = player.x;
@@ -1053,31 +1045,31 @@ function resumeRunnerAfterPenalty() {
 }
 
 function drawPenaltyScene() {
-    if (currentMode === GAME_MODE.RUNNER) return;
+    if (currentMode === MODE.RUNNER) return;
 
     const goalLeft = (logicalWidth - goalPost.width) / 2;
     const goalRight = goalLeft + goalPost.width;
 
-    // 1. Grande Área Branca
+    // 1. Grande Área de Futebol
     ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.lineWidth = 3;
     const boxW = goalPost.width + 50;
     ctx.strokeRect((logicalWidth - boxW) / 2, goalPost.y, boxW, 200);
 
     // Marca da Cal (Pênalti)
     ctx.beginPath();
-    ctx.arc(logicalWidth / 2, logicalHeight - 175, 5, 0, Math.PI * 2);
+    ctx.arc(logicalWidth / 2, logicalHeight - 170, 5, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
 
-    // Meia-lua da área
+    // Meia-lua da grande área
     ctx.beginPath();
-    ctx.arc(logicalWidth / 2, logicalHeight - 175, 45, Math.PI, 0);
+    ctx.arc(logicalWidth / 2, logicalHeight - 170, 45, Math.PI, 0);
     ctx.stroke();
 
-    // 2. Trave e Rede do Gol
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    // 2. Trave e Rede do Gol (100% Visível e Nítida!)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
     ctx.fillRect(goalLeft, goalPost.y, goalPost.width, goalPost.height);
 
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
@@ -1095,7 +1087,7 @@ function drawPenaltyScene() {
         ctx.stroke();
     }
 
-    // Postes Brancos Grossos
+    // Postes Brancos
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = goalPost.postThickness;
     ctx.beginPath();
@@ -1140,11 +1132,10 @@ function drawPenaltyScene() {
     ctx.fillText('⚽', penaltyBall.x, penaltyBall.y);
     ctx.restore();
 
-    // 5. Retículo / Alvo de Mira no Pênalti
-    if (currentMode === GAME_MODE.PENALTY_AIM) {
+    // 5. Retículo de Mira no Pênalti
+    if (currentMode === MODE.PENALTY_AIM) {
         ctx.save();
-        // Linha pontilhada da bola até a mira
-        ctx.strokeStyle = 'rgba(250, 204, 21, 0.7)';
+        ctx.strokeStyle = 'rgba(250, 204, 21, 0.75)';
         ctx.lineWidth = 2.5;
         ctx.setLineDash([8, 6]);
         ctx.beginPath();
@@ -1152,7 +1143,6 @@ function drawPenaltyScene() {
         ctx.lineTo(penaltyAim.x, penaltyAim.y);
         ctx.stroke();
 
-        // Alvo retículo giratório
         ctx.strokeStyle = '#ef4444';
         ctx.lineWidth = 3;
         ctx.setLineDash([]);
@@ -1183,23 +1173,20 @@ function showComboPopup(text) {
 }
 
 // ========================================================
-// LOOP PRINCIPAL DE ANIMAÇÃO E ATUALIZAÇÃO
+// LOOP PRINCIPAL DE ANIMAÇÃO
 // ========================================================
 function update(delta, timestamp) {
-    if (currentMode === GAME_MODE.RUNNER) {
-        // Metros avançam realisticamente de acordo com o tempo e velocidade
+    if (currentMode === MODE.RUNNER) {
         const meterIncrement = 0.55 * timeScale;
         meters += meterIncrement;
         score += 1;
         metersTxt.innerHTML = `${Math.floor(meters)}m <small>/ ${targetMeters}m</small>`;
         scoreTxt.textContent = score;
 
-        // Disparo do Pênalti aos 1.000 metros!
         if (meters >= targetMeters) {
-            startPenaltySetup();
+            startPenaltyPhase();
         }
 
-        // Rolagem do campo
         fieldScrollY += currentScrollSpeed * timeScale;
 
         spawnDefendersIfNeeded();
@@ -1219,7 +1206,7 @@ function update(delta, timestamp) {
 }
 
 function gameLoop(timestamp) {
-    if (currentMode === GAME_MODE.GAME_OVER) return;
+    if (currentMode === MODE.GAME_OVER) return;
 
     if (!lastTimestamp) lastTimestamp = timestamp;
     const delta = timestamp - lastTimestamp;
@@ -1243,16 +1230,16 @@ function gameLoop(timestamp) {
 
     ctx.restore();
 
-    if (currentMode !== GAME_MODE.GAME_OVER) {
+    if (currentMode !== MODE.GAME_OVER) {
         animationFrameId = requestAnimationFrame(gameLoop);
     }
 }
 
 // ========================================================
-// FIM DE JOGO E RECOMEÇO
+// FIM DE JOGO E REINICIALIZAÇÃO
 // ========================================================
 function triggerGameOver(reason, emoji = '💥') {
-    currentMode = GAME_MODE.GAME_OVER;
+    currentMode = MODE.GAME_OVER;
     if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
@@ -1274,14 +1261,18 @@ function triggerGameOver(reason, emoji = '💥') {
     resBest.textContent = `${highScore} PTS`;
 
     penaltyUi.classList.add('hidden');
+    arcadeHud.style.opacity = '1';
+    actionControls.style.display = 'flex';
     gameOverScreen.classList.remove('hidden');
 }
 
 function restartGame() {
     gameOverScreen.classList.add('hidden');
     penaltyUi.classList.add('hidden');
+    arcadeHud.style.opacity = '1';
+    actionControls.style.display = 'flex';
 
-    currentMode = GAME_MODE.RUNNER;
+    currentMode = MODE.RUNNER;
     meters = 0;
     targetMeters = 1000;
     score = 0;
@@ -1314,7 +1305,7 @@ function restartGame() {
 }
 
 // ========================================================
-// CONTROLES DE ENTRADA LIVRE 2D & EVENTOS
+// CONTROLES DE ENTRADA LIVRE 2D & TOQUE
 // ========================================================
 let touchOriginX = 0;
 let touchOriginY = 0;
@@ -1325,7 +1316,7 @@ let isTouching = false;
 // Toque Relativo
 container.addEventListener('touchstart', (e) => {
     sfx.init();
-    if (currentMode === GAME_MODE.GAME_OVER) return;
+    if (currentMode === MODE.GAME_OVER) return;
 
     if (e.touches && e.touches.length > 0) {
         isTouching = true;
@@ -1348,11 +1339,11 @@ container.addEventListener('touchend', () => {
     isTouching = false;
 });
 
-// Suporte com Mouse
+// Suporte a Mouse
 let isMouseDown = false;
 container.addEventListener('mousedown', (e) => {
     sfx.init();
-    if (currentMode === GAME_MODE.GAME_OVER) return;
+    if (currentMode === MODE.GAME_OVER) return;
     isMouseDown = true;
     touchOriginX = e.clientX;
     touchOriginY = e.clientY;
@@ -1372,7 +1363,7 @@ window.addEventListener('mouseup', () => {
     isMouseDown = false;
 });
 
-// Teclado (WASD / Setas / Espaço / Shift)
+// Teclado
 window.addEventListener('keydown', (e) => {
     sfx.init();
     const speed = 25;
@@ -1382,7 +1373,7 @@ window.addEventListener('keydown', (e) => {
     else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') player.targetY += speed;
     else if (e.key === 'Shift') setSlowMo(true);
     else if (e.key === ' ' || e.key === 'Enter') {
-        if (currentMode === GAME_MODE.PENALTY_AIM) executePenaltyKick();
+        if (currentMode === MODE.PENALTY_AIM) executePenaltyKick();
         else triggerSpin();
     }
 });
@@ -1391,7 +1382,7 @@ window.addEventListener('keyup', (e) => {
     if (e.key === 'Shift') setSlowMo(false);
 });
 
-// Botão de Slow-Mo (Segurar para ativar)
+// Ações
 slowmoBtn.addEventListener('mousedown', () => setSlowMo(true));
 slowmoBtn.addEventListener('mouseup', () => setSlowMo(false));
 slowmoBtn.addEventListener('mouseleave', () => setSlowMo(false));
@@ -1404,7 +1395,6 @@ slowmoBtn.addEventListener('touchend', (e) => {
     setSlowMo(false);
 });
 
-// Botão de Giro 360°
 spinBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     triggerSpin();
@@ -1414,7 +1404,6 @@ spinBtn.addEventListener('touchend', (e) => {
     triggerSpin();
 });
 
-// Botão do Pênalti
 penaltyKickBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     executePenaltyKick();
@@ -1424,7 +1413,6 @@ penaltyKickBtn.addEventListener('touchend', (e) => {
     executePenaltyKick();
 });
 
-// Botão Jogar Novamente
 retryBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     restartGame();
@@ -1434,7 +1422,6 @@ retryBtn.addEventListener('touchend', (e) => {
     restartGame();
 });
 
-// Áudio Mudo / Ativo
 soundBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     sfx.init();
@@ -1442,7 +1429,6 @@ soundBtn.addEventListener('click', (e) => {
     soundBtn.textContent = on ? '🔊' : '🔇';
 });
 
-// Oculta dica após 4 segundos
 setTimeout(() => {
     if (hintBubble) hintBubble.style.opacity = '0';
 }, 4200);

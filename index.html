@@ -3,20 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Touchdown Craque Hero - Futebol Runner</title>
+    <meta name="theme-color" content="#1e824c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <title>Craque Hero - Drible de Futebol & Pênalti</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
-        <!-- Canvas Principal de Renderização Pixel-Arcade -->
+        <!-- Canvas de Renderização do Campo e Jogadores -->
         <canvas id="gameCanvas"></canvas>
 
-        <!-- Efeito de Vinheta e Estádio Retrô -->
+        <!-- Efeito de Estádio (Iluminação Suave) -->
         <div id="stadium-overlay"></div>
 
-        <!-- HUD Superior Estilo Touchdown Hero -->
+        <!-- HUD Superior da Partida -->
         <div id="arcade-hud">
-            <!-- Barra de Câmera Lenta / Stamina Retrô (Como no Touchdown Hero) -->
+            <!-- Barra de Câmera Lenta (Slow-Mo) -->
             <div id="stamina-container" title="Barra de Câmera Lenta (Slow-Mo)">
                 <div class="stamina-label">SLOW-MO</div>
                 <div class="stamina-frame">
@@ -24,10 +29,10 @@
                 </div>
             </div>
 
-            <!-- Placar Principal e Metragem -->
+            <!-- Placar de Futebol: Metros até a Área, Pontos e Gols -->
             <div id="top-stats-row">
                 <div class="arcade-card meters-card">
-                    <span class="card-tag">DISTÂNCIA</span>
+                    <span class="card-tag">AVANÇO</span>
                     <span id="meters-txt">0m <small>/ 1000m</small></span>
                 </div>
 
@@ -45,34 +50,35 @@
             </div>
         </div>
 
-        <!-- Banner Flutuante de Finta (Ex: "DRIBLE! +150") -->
+        <!-- Notificação Flutuante de Drible (Ex: "DRIBLE DE CRAQUE! +150") -->
         <div id="combo-popup" class="hidden"></div>
 
-        <!-- Botões de Ação na Corrida -->
+        <!-- Controles de Ação na Corrida -->
         <div id="action-controls">
-            <!-- Botão de Câmera Lenta (Segure para ativar) -->
+            <!-- Botão de Câmera Lenta -->
             <button id="slowmo-btn" class="arcade-action-btn btn-slowmo" title="Segure para Câmera Lenta">
                 <span class="btn-icon">⏱️</span>
                 <span class="btn-lbl">SLOW-MO</span>
             </button>
 
-            <!-- Botão de Giro / Spin Move -->
-            <button id="spin-btn" class="arcade-action-btn btn-spin" title="Giro 360° Invulnerável">
+            <!-- Botão de Giro 360° -->
+            <button id="spin-btn" class="arcade-action-btn btn-spin" title="Giro 360° com a Bola">
                 <span class="btn-icon">🌪️</span>
                 <span class="btn-lbl">GIRO</span>
                 <div id="spin-cooldown-shade"></div>
             </button>
         </div>
 
-        <!-- Interface Exclusiva do Pênalti (Jogador Parado na Marca da Cal) -->
+        <!-- Interface do Pênalti (Compacta e SEM cobrir a trave e o goleiro!) -->
         <div id="penalty-ui" class="hidden">
-            <div class="penalty-banner">
-                <div class="penalty-tag">DISPUTA DE PÊNALTI</div>
-                <h2 class="penalty-title">VOCÊ CARA A CARA COM O GOLEIRO!</h2>
-                <p class="penalty-instruction">Arraste a mira para os cantos da trave e chute com precisão!</p>
+            <!-- Header Compacto que fica no topo sem tampar a trave -->
+            <div class="penalty-compact-header">
+                <span class="penalty-badge">DISPUTA DE PÊNALTI</span>
+                <span class="penalty-sub">Mire nos cantos da trave e estufe a rede!</span>
             </div>
 
-            <div class="penalty-controls">
+            <!-- Botão de Chute no rodapé -->
+            <div class="penalty-footer">
                 <button id="penalty-kick-btn" class="btn-penalty-shoot">
                     <span>⚽ BATER O PÊNALTI!</span>
                 </button>
@@ -81,15 +87,15 @@
 
         <!-- Dica de Início -->
         <div id="hint-bubble">
-            Arraste livremente em 2D • Finte os zagueiros quando acender <strong>!</strong>
+            Arraste livremente em 2D para driblar a zaga • Segure Slow-Mo para achar espaços
         </div>
 
-        <!-- Tela de Fim de Jogo Arcade -->
+        <!-- Tela de Fim de Jogo -->
         <div id="game-over-screen" class="hidden">
             <div class="arcade-modal">
                 <div class="modal-badge" id="over-emoji">💥</div>
                 <h1 class="modal-title">FIM DE JOGO</h1>
-                <p id="over-desc" class="modal-subtitle">Você foi desarmado pelo zagueiro!</p>
+                <p id="over-desc" class="modal-subtitle">O zagueiro roubou a bola!</p>
 
                 <div class="modal-stats-grid">
                     <div class="modal-stat">
@@ -105,7 +111,7 @@
                         <span id="res-goals" class="m-val">0</span>
                     </div>
                     <div class="modal-stat">
-                        <span class="m-label">FINTAS</span>
+                        <span class="m-label">DRIBLES</span>
                         <span id="res-dribbles" class="m-val">0</span>
                     </div>
                 </div>
