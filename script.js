@@ -192,6 +192,60 @@ class AudioManager {
         } catch (e) {}
     }
 
+    
+    playCombo(level) {
+        if (!this.enabled || !this.ctx) return;
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            const baseFreq = 440;
+            const freq = Math.min(1350, baseFreq * Math.pow(1.15, Math.min(10, level)));
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.28, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.18);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.19);
+        } catch (e) {}
+    }
+
+    playThunder() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(80, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(28, this.ctx.currentTime + 0.7);
+            gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.75);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.8);
+        } catch (e) {}
+    }
+
+    playCheckpoint() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+            [523.25, 659.25, 783.99, 1046.50, 1318.51].forEach((freq, i) => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime + i * 0.08);
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime + i * 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4 + i * 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(this.ctx.currentTime + i * 0.08);
+                osc.stop(this.ctx.currentTime + 0.45 + i * 0.08);
+            });
+        } catch (e) {}
+    }
+
     playGoalFanfare() {
         if (!this.enabled || !this.ctx) return;
         try {
@@ -223,6 +277,14 @@ const previewCanvas = document.getElementById('preview');
 const pCtx = previewCanvas.getContext('2d');
 
 const hudEl = document.getElementById('hud');
+
+const comboPillEl = document.getElementById('combo-pill');
+const comboCountEl = document.getElementById('combo-count');
+const missionBarEl = document.getElementById('mission-bar');
+const missionTxtEl = document.getElementById('mission-txt');
+const missionRewardEl = document.getElementById('mission-reward');
+const oComboEl = document.getElementById('o-combo');
+
 const stageNumEl = document.getElementById('stage-num');
 const stadiumNameEl = document.getElementById('stadium-name');
 const progTxtEl = document.getElementById('prog-txt');
@@ -305,6 +367,7 @@ const profile = {
     hair: HAIRS[0],
     highScore: 0,
     totalCoins: 0,
+    missionIdx: 0,
     upgrades: {
         slow: 1,    // max 5
         spin: 1,    // max 5
@@ -322,6 +385,7 @@ const profile = {
             if (data.hair) this.hair = data.hair;
             if (data.highScore) this.highScore = data.highScore;
             if (typeof data.totalCoins === 'number') this.totalCoins = data.totalCoins;
+            if (typeof data.missionIdx === 'number') this.missionIdx = data.missionIdx;
             if (data.upgrades) this.upgrades = Object.assign({ slow: 1, spin: 1, magnet: 1, boot: 1, penalty: 1 }, data.upgrades);
         } catch (e) {}
     },
@@ -335,6 +399,7 @@ const profile = {
                 hair: this.hair,
                 highScore: this.highScore,
                 totalCoins: this.totalCoins,
+                missionIdx: this.missionIdx || 0,
                 upgrades: this.upgrades
             }));
         } catch (e) {}
@@ -409,6 +474,63 @@ let goals = 0;
 
 // Câmera lenta
 let slowEnergy = 100;
+
+// =========================================================
+// MISSÕES / METAS ATIVAS DO CRAQUE
+// =========================================================
+const MISSIONS = [
+    { id: 'dribble_3', text: 'Faça 3 dribles', target: 3, type: 'dribbles', reward: 50 },
+    { id: 'combo_2', text: 'Atinja Combo x2', target: 2, type: 'combo', reward: 60 },
+    { id: 'coins_20', text: 'Colete 20 moedas', target: 20, type: 'coins', reward: 50 },
+    { id: 'stage_2', text: 'Alcance a Fase 2', target: 2, type: 'stage', reward: 100 },
+    { id: 'combo_4', text: 'Atinja Combo x4', target: 4, type: 'combo', reward: 120 },
+    { id: 'dribble_10', text: 'Faça 10 dribles na partida', target: 10, type: 'dribbles', reward: 150 },
+    { id: 'stage_3', text: 'Alcance a Fase 3 (Chuva)', target: 3, type: 'stage', reward: 180 },
+    { id: 'coins_50', text: 'Junte 50 moedas', target: 50, type: 'coins', reward: 120 },
+    { id: 'stage_4', text: 'Alcance a Fase 4 (Sinalizadores)', target: 4, type: 'stage', reward: 250 }
+];
+
+function getCurrentMission() {
+    const idx = (profile.missionIdx || 0) % MISSIONS.length;
+    return MISSIONS[idx];
+}
+
+function updateMissionProgress() {
+    const m = getCurrentMission();
+    if (!m || !missionTxtEl) return;
+
+    let currentVal = 0;
+    if (m.type === 'dribbles') currentVal = dribbles;
+    else if (m.type === 'combo') currentVal = maxComboSession;
+    else if (m.type === 'coins') currentVal = coinsSession;
+    else if (m.type === 'stage') currentVal = stage;
+
+    missionTxtEl.textContent = `${m.text} (${Math.min(m.target, currentVal)}/${m.target})`;
+    if (missionRewardEl) missionRewardEl.textContent = `🪙 +${m.reward}`;
+
+    if (currentVal >= m.target) {
+        const reward = m.reward;
+        profile.totalCoins += reward;
+        coinsSession += reward;
+        if (coinsEl) coinsEl.textContent = coinsSession;
+        profile.missionIdx = (profile.missionIdx || 0) + 1;
+        profile.save();
+
+        audio.playBuy();
+        showToast('🏆 DESAFIO CUMPRIDO!', `+${reward} MOEDAS DE BÔNUS!`);
+
+        const nextM = getCurrentMission();
+        missionTxtEl.textContent = `${nextM.text} (0/${nextM.target})`;
+        if (missionRewardEl) missionRewardEl.textContent = `🪙 +${nextM.reward}`;
+    }
+}
+
+// Combos de Dribles
+let comboCount = 0;
+let comboTimer = 0;
+let maxComboSession = 0;
+let lightningTimer = 8.0;
+
 let isSlowMo = false;
 let timeScale = 1.0;
 const SLOWMO_DRAIN_RATE = 28;     // Drena ~28% por segundo de slow-mo
@@ -1267,7 +1389,18 @@ function updateParticles(dt) {
         const p = particles[i];
         p.life -= p.decay * dt;
 
-        if (p.type === 'dust') {
+                if (p.type === 'text') {
+            p.y += p.vy * dt;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.life);
+            ctx.fillStyle = p.color || '#ffffff';
+            ctx.font = 'bold 15px var(--head), sans-serif';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = 'rgba(0,0,0,0.8)';
+            ctx.shadowBlur = 4;
+            ctx.fillText(p.text, p.x, p.y);
+            ctx.restore();
+        } else if (p.type === 'dust') {
             p.x += p.vx * dt;
             p.y += p.vy * dt;
             p.size += p.growth * dt;
@@ -1377,16 +1510,59 @@ function drawPitch(dt = 0.016) {
     }
 
     // 6. A partir de 820m da fase, a Grande Área e o Gol aproximam-se!
-    if (stageDist >= 820) {
-        const goalDistAhead = STAGE_GOAL_METERS - stageDist;
-        const goalScreenY = (player.y - 120) - (goalDistAhead / 180) * (height * 0.65);
-        if (goalScreenY > -240) {
-            drawApproachingPenaltyArea(goalScreenY, stadium);
+    if (stageDist >= 880) {
+        const distAhead = STAGE_GOAL_METERS - stageDist;
+        const gateScreenY = (player.y - 80) - (distAhead / 120) * (height * 0.6);
+        if (gateScreenY > -100 && gateScreenY < height + 50) {
+            drawStadiumGate(gateScreenY, stage, stadium);
         }
     }
 
     // 7. Efeitos climáticos do estádio
     drawWeather(stadium, dt);
+}
+
+
+// =========================================================
+// PORTAL DE CHECKPOINT DE ESTÁDIO (TRANSIÇÃO CONTÍNUA)
+// =========================================================
+function drawStadiumGate(gateY, currentStage, stadium) {
+    ctx.save();
+    const gateW = Math.min(width * 0.94, 380);
+    const gateX = (width - gateW) / 2;
+
+    // Estrutura de Treliça Metálica Superior
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(gateX, gateY - 26, gateW, 30);
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(gateX, gateY - 26, gateW, 30);
+
+    // Postes Laterais do Pórtico
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(gateX, gateY, 18, 50);
+    ctx.fillRect(gateX + gateW - 18, gateY, 18, 50);
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(gateX, gateY, 18, 50);
+    ctx.strokeRect(gateX + gateW - 18, gateY, 18, 50);
+
+    // Letreiro LED do Pórtico
+    const t = performance.now() * 0.005;
+    ctx.fillStyle = Math.sin(t * 3) > 0 ? '#facc15' : '#ffffff';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`🏁 PRÓXIMO ESTÁDIO: FASE ${currentStage + 1} 🏁`, width / 2, gateY - 11);
+
+    // Linha de chegada no chão com quadrados xadrez
+    const squareSize = 14;
+    const squares = Math.floor(gateW / squareSize);
+    for (let i = 0; i < squares; i++) {
+        ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#0f172a';
+        ctx.fillRect(gateX + i * squareSize, gateY + 36, squareSize, 8);
+    }
+    ctx.restore();
 }
 
 function drawApproachingPenaltyArea(boxY, stadium) {
@@ -1422,7 +1598,18 @@ function drawApproachingPenaltyArea(boxY, stadium) {
 
 function drawWeather(stadium, dt) {
     if (stadium.weather === 'rain') {
-        // Chuva dinâmica e respingos no gramado molhado
+        // Chuva dinâmica com trovões e relâmpagos
+        lightningTimer -= dt;
+        if (lightningTimer <= 0) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.48)';
+            ctx.fillRect(0, 0, width, height);
+            ctx.restore();
+            audio.playThunder();
+            screenShake = 12;
+            lightningTimer = Math.random() * 8 + 6;
+        }
+
         ctx.save();
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
         ctx.lineWidth = 1.6;
@@ -1972,13 +2159,48 @@ function updateDefenders(dt) {
             }
         }
 
-        // Drible no Limite! (Dodge do Touchdown Hero)
+        // Drible no Limite! (Dodge do Touchdown Hero + Combo Multiplicador)
         if (!d.dodged && (d.y > player.y + 26 || d.state === 'STUMBLED')) {
             d.dodged = true;
             dribbles++;
-            score += 150;
-            scoreEl.textContent = score;
-            showToast('⚽ DRIBLE NO LIMITE!', '+150 PTS');
+            comboCount++;
+            if (comboCount > maxComboSession) maxComboSession = comboCount;
+            comboTimer = 3.6;
+
+            const mult = Math.min(5, comboCount);
+            const pts = 150 * mult;
+            score += pts;
+            if (scoreEl) scoreEl.textContent = score;
+
+            audio.playCombo(comboCount);
+
+            // Texto flutuante de pontuação
+            particles.push({
+                type: 'text',
+                text: comboCount > 1 ? `x${comboCount} +${pts}` : `+${pts}`,
+                x: d.x,
+                y: d.y - 25,
+                vy: -60,
+                life: 0.9,
+                color: comboCount >= 3 ? '#facc15' : '#ffffff'
+            });
+
+            if (comboPillEl) {
+                comboPillEl.classList.remove('hidden');
+                if (comboCountEl) comboCountEl.textContent = 'x' + comboCount;
+            }
+
+            if (comboCount >= 4) {
+                showToast(`💥 EM CHAMAS x${comboCount}!`, `+${pts} PONTOS!`);
+            } else if (comboCount === 3) {
+                showToast('⚡ ESPETACULAR x3!', `+${pts} PONTOS!`);
+            } else if (comboCount === 2) {
+                showToast('🔥 COMBO x2!', `+${pts} PONTOS!`);
+            } else {
+                showToast('⚽ DRIBLE NO LIMITE!', '+150 PTS');
+            }
+
+            updateMissionProgress();
         }
 
         // Colisão com o Jogador
@@ -2070,8 +2292,8 @@ function updatePlayer(dt) {
             }
         }
 
-        // Rastro dourado
-        if (superSpeedTimer > 0) {
+        // Rastro dourado e rastro de fogo em combos altos
+        if (superSpeedTimer > 0 || comboCount >= 3) {
             addGoldTrail(player.x, player.y);
         }
 
@@ -2130,7 +2352,7 @@ function executeSwipeKick(targetX, speed, curve) {
     if (gameState !== STATE.PENALTY_AIM) return;
     gameState = STATE.PENALTY_RUNUP;
     penRunUp = 0;
-    penaltyUiEl.classList.add('hidden');
+    if (penaltyUiEl) penaltyUiEl.classList.add('hidden');
 
     // Salva parâmetros do chute
     penBall.targetX = Math.max(goalPost.x + 15, Math.min(goalPost.x + goalPost.width - 15, targetX));
@@ -2187,7 +2409,7 @@ function startPenaltySetup() {
     goalie.bob = 0;
 
     audio.playWhistle(true);
-    penaltyUiEl.classList.remove('hidden');
+    if (penaltyUiEl) penaltyUiEl.classList.remove('hidden');
 }
 
 function startPenaltyShot() {
@@ -2323,6 +2545,40 @@ function handleGoalSuccess() {
     setTimeout(() => {
         advanceToNextStage();
     }, 2400);
+}
+
+
+function advanceToNextStage() {
+    stage++;
+    stageDist = 0; // Reinicia a contagem de 0m para a nova fase
+
+    const bonusScore = 1000 + (stage - 1) * 250;
+    const bonusCoins = 50;
+    score += bonusScore;
+    coinsSession += bonusCoins;
+    profile.totalCoins += bonusCoins;
+    profile.save();
+
+    audio.playCheckpoint();
+    addConfetti(100);
+    screenShake = 16;
+
+    // Aumenta a velocidade e intensidade da corrida!
+    scrollSpeed = Math.min(320, 220 + (stage - 1) * 16);
+    nextSpawnDist = 35;
+
+    const stadium = getCurrentStadium();
+    if (stageNumEl) stageNumEl.textContent = `FASE ${stage}`;
+    if (stadiumNameEl) stadiumNameEl.textContent = stadium.name;
+    if (progTxtEl) progTxtEl.textContent = `0m / ${STAGE_GOAL_METERS}m`;
+    if (progFillEl) progFillEl.style.width = '0%';
+    if (progBallEl) progBallEl.style.left = '0%';
+    if (coinsEl) coinsEl.textContent = coinsSession;
+    if (scoreEl) scoreEl.textContent = score;
+
+    showBanner('stage', '🏁 CHECKPOINT ATINGIDO!', `FASE ${stage}: ${stadium.name}`, `+${bonusScore} PTS & +${bonusCoins} MOEDAS DE BÔNUS!`);
+
+    updateMissionProgress();
 }
 
 function drawPenaltyScene() {
@@ -2715,10 +2971,9 @@ function update(dt) {
         progFillEl.style.width = `${progPct}%`;
         progBallEl.style.left = `${progPct}%`;
 
-        // Pênalti a cada 1000m!
+        // Transição contínua para o próximo estádio aos 1000m!
         if (stageDist >= STAGE_GOAL_METERS) {
-            startPenaltySetup();
-            return;
+            advanceToNextStage();
         }
 
         fieldY += scrollSpeed * timeScale * dt;
@@ -2729,10 +2984,17 @@ function update(dt) {
     }
 
     updatePlayer(dt);
-    updatePenalty(dt);
     updateSlowMoState(dt);
     updateCooldowns(dt);
     updateParticles(dt);
+
+    if (comboTimer > 0) {
+        comboTimer -= dt;
+        if (comboTimer <= 0) {
+            comboCount = 0;
+            if (comboPillEl) comboPillEl.classList.add('hidden');
+        }
+    }
 
     if (screenShake > 0) {
         screenShake = Math.max(0, screenShake - 30 * dt);
@@ -2780,7 +3042,7 @@ function startGame() {
     pauseScreen.classList.add('hidden');
     hudEl.classList.remove('hidden');
     controlsEl.classList.remove('hidden');
-    penaltyUiEl.classList.add('hidden');
+    if (penaltyUiEl) penaltyUiEl.classList.add('hidden');
     appEl.classList.remove('pen', 'slowmo');
 
     gameState = STATE.RUNNING;
@@ -2810,6 +3072,11 @@ function startGame() {
     defenders = [];
     pickups = [];
     particles = [];
+    comboCount = 0;
+    comboTimer = 0;
+    maxComboSession = 0;
+    if (comboPillEl) comboPillEl.classList.add('hidden');
+    updateMissionProgress();
 
     player.x = width / 2;
     player.y = height - 130;
@@ -2834,14 +3101,15 @@ function triggerGameOver(reason) {
     oScoreEl.textContent = score;
     oStageEl.textContent = stage;
     oDistEl.textContent = `${Math.floor(totalDist)}m`;
-    oGoalsEl.textContent = goals;
+    if (oComboEl) oComboEl.textContent = `${maxComboSession}x`;
+    if (oGoalsEl) oGoalsEl.textContent = goals;
     oDribblesEl.textContent = dribbles;
     oCoinsEl.textContent = coinsSession;
     oBestEl.textContent = profile.highScore;
 
     hudEl.classList.add('hidden');
     controlsEl.classList.add('hidden');
-    penaltyUiEl.classList.add('hidden');
+    if (penaltyUiEl) penaltyUiEl.classList.add('hidden');
     overScreen.classList.remove('hidden');
 }
 
@@ -2852,7 +3120,7 @@ function openMenu() {
     pauseScreen.classList.add('hidden');
     hudEl.classList.add('hidden');
     controlsEl.classList.add('hidden');
-    penaltyUiEl.classList.add('hidden');
+    if (penaltyUiEl) penaltyUiEl.classList.add('hidden');
     initMenuUI();
     renderShopUI();
 }

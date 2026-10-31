@@ -57,9 +57,22 @@
             </div>
             <div class="coin-card"><span class="coin-ico"></span><span id="coins">0</span></div>
         </div>
+
+        <!-- Barra de Missão / Desafio Ativo -->
+        <div id="mission-bar" class="mission-bar">
+            <span class="mission-ico">🎯</span>
+            <span id="mission-txt">Drible 3 zagueiros (0/3)</span>
+            <span id="mission-reward" class="mission-reward">🪙 +50</span>
+        </div>
     </div>
 
-    <!-- Botões de ação durante a corrida -->
+    <!-- Badge de Combo Multiplicador de Dribles -->
+    <div id="combo-pill" class="combo-pill hidden">
+        <span id="combo-count">x2</span>
+        <span class="combo-lbl">COMBO!</span>
+    </div>
+
+    <!-- Botões de ação durante a corrida (Posicionados no lado esquerdo) -->
     <div id="controls" class="hidden">
         <button id="slow-btn" class="act-btn act-slow" aria-label="Câmera lenta" type="button">
             <span class="ico">⏱️</span><span class="txt">SLOW</span>
@@ -78,17 +91,8 @@
         <div id="banner-sub"></div>
     </div>
 
-    <!-- Interface da Disputa de Pênalti (Close-up & Flick) -->
-    <div id="penalty-ui" class="hidden">
-        <div class="pen-flick-banner">
-            <div class="pen-flick-icon">👆</div>
-            <div class="pen-flick-content">
-                <div class="pen-flick-title">DESLIZE NA BOLA PARA CHUTAR!</div>
-                <div class="pen-flick-sub">Arraste reto para uma bomba ou faça curva na gaveta!</div>
-            </div>
-        </div>
-        <button id="shoot-btn" class="btn btn-primary btn-kick hidden" type="button">⚽ BATER O PÊNALTI!</button>
-    </div>
+    <!-- Elementos legados ocultos -->
+    <div id="penalty-ui" class="hidden" style="display:none"><button id="shoot-btn" type="button" style="display:none"></button></div>
 
     <div id="fade"></div>
 
@@ -282,9 +286,9 @@
             <p id="over-reason">Você foi desarmado!</p>
             <div class="big-score" id="o-score">0</div>
             <div class="stats-grid">
-                <div><b id="o-stage">1</b><span>FASE</span></div>
+                <div><b id="o-stage">1</b><span>ESTÁDIO</span></div>
                 <div><b id="o-dist">0m</b><span>DISTÂNCIA</span></div>
-                <div><b id="o-goals">0</b><span>GOLS</span></div>
+                <div><b id="o-combo">0x</b><span>MAX COMBO</span><b id="o-goals" style="display:none">0</b></div>
                 <div><b id="o-dribbles">0</b><span>DRIBLES</span></div>
                 <div><b id="o-coins">0</b><span>MOEDAS</span></div>
                 <div><b id="o-best">0</b><span>RECORDE</span></div>
