@@ -762,6 +762,200 @@ function drawSoccerPlayer(c, x, y, opts = {}) {
 }
 
 // Mini preview do card de escolha de time
+
+// =========================================================
+// GOLEIRO DRAMÁTICO (GINGA NA LINHA E SALTO ACROBÁTICO)
+// =========================================================
+function drawGoalkeeper(c, x, y, opts = {}) {
+    const {
+        state = 'IDLE', // 'IDLE', 'DIVING', 'SAVED', 'CONCEDED'
+        diveDir = 0,    // -1 (left) or 1 (right)
+        diveProgress = 0,
+        bob = 0,
+        skin = SKINS[0],
+        hair = HAIRS[0]
+    } = opts;
+
+    c.save();
+    c.translate(x, y);
+
+    if (state === 'DIVING' || state === 'SAVED') {
+        // SALTO ACROBÁTICO COMPLETO EM DIAGONAL
+        const diveAngle = diveDir * (0.85 + Math.min(0.35, diveProgress * 0.4));
+        c.rotate(diveAngle);
+
+        // Sombra no gramado projetada
+        c.beginPath();
+        c.ellipse(0, 32, 28, 8, 0, 0, Math.PI * 2);
+        c.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        c.fill();
+
+        // Pernas esticadas em salto
+        c.fillStyle = '#0f172a';
+        c.fillRect(-18, 6, 12, 14);
+        c.fillRect(-4, 8, 12, 16);
+        c.fillStyle = '#22c55e'; // meias fluorescentes
+        c.fillRect(-18, 20, 12, 14);
+        c.fillRect(-4, 24, 12, 14);
+        c.fillStyle = '#0f172a';
+        c.fillRect(-20, 32, 14, 8);
+        c.fillRect(-6, 36, 14, 8);
+
+        // Tronco inclinado (Camisa neon de goleiro)
+        c.fillStyle = '#eab308';
+        c.beginPath();
+        c.roundRect(-16, -18, 32, 28, 6);
+        c.fill();
+        c.fillStyle = '#ca8a04';
+        c.fillRect(-16, 2, 32, 6);
+
+        // Número 1 nas costas
+        c.fillStyle = '#0f172a';
+        c.font = 'bold 12px sans-serif';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText('1', 0, -4);
+
+        // Cabeça
+        c.fillStyle = skin;
+        c.beginPath();
+        c.arc(0, -26, 12, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = hair;
+        c.beginPath();
+        c.arc(0, -30, 11, Math.PI, Math.PI * 2);
+        c.fill();
+
+        // BRAÇOS TOTALMENTE ESTICADOS PARA PEGAR A BOLA
+        c.fillStyle = '#eab308';
+        c.fillRect(-26, -16, 10, 10);
+        c.fillStyle = skin;
+        c.fillRect(-34, -22, 10, 8);
+        // Luva de Goleiro Gigante Esquerda
+        c.fillStyle = '#22c55e';
+        c.beginPath();
+        c.roundRect(-46, -26, 14, 16, 4);
+        c.fill();
+        c.strokeStyle = '#ffffff';
+        c.lineWidth = 1.5;
+        c.stroke();
+
+        c.fillStyle = '#eab308';
+        c.fillRect(16, -16, 10, 10);
+        c.fillStyle = skin;
+        c.fillRect(24, -22, 10, 8);
+        // Luva de Goleiro Gigante Direita
+        c.fillStyle = '#22c55e';
+        c.beginPath();
+        c.roundRect(32, -26, 14, 16, 4);
+        c.fill();
+        c.strokeStyle = '#ffffff';
+        c.lineWidth = 1.5;
+        c.stroke();
+
+        if (state === 'SAVED') {
+            c.beginPath();
+            c.arc(diveDir > 0 ? 38 : -38, -20, 24, 0, Math.PI * 2);
+            c.fillStyle = 'rgba(250, 204, 21, 0.45)';
+            c.fill();
+        }
+    } else if (state === 'CONCEDED') {
+        // GOLEIRO NO CHÃO LAMENTANDO O GOL
+        c.rotate(diveDir * 1.35);
+        c.translate(0, 16);
+
+        c.beginPath();
+        c.ellipse(0, 12, 34, 10, 0, 0, Math.PI * 2);
+        c.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        c.fill();
+
+        c.fillStyle = '#eab308';
+        c.beginPath();
+        c.roundRect(-16, -12, 32, 22, 5);
+        c.fill();
+        c.fillStyle = '#0f172a';
+        c.fillRect(-14, 8, 28, 12);
+
+        c.fillStyle = '#22c55e';
+        c.fillRect(-28, -6, 12, 12);
+        c.fillRect(16, -6, 12, 12);
+
+        c.fillStyle = skin;
+        c.beginPath();
+        c.arc(0, -20, 12, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = hair;
+        c.beginPath();
+        c.arc(0, -24, 11, Math.PI, Math.PI * 2);
+        c.fill();
+    } else {
+        // GINGA DE GOLEIRO (READY / IDLE NA LINHA)
+        const gBob = Math.sin(bob) * 3;
+        c.translate(0, gBob);
+
+        c.beginPath();
+        c.ellipse(0, 26, 26, 9, 0, 0, Math.PI * 2);
+        c.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        c.fill();
+
+        // Pernas flexionadas
+        c.fillStyle = '#0f172a';
+        c.fillRect(-15, 6, 11, 12);
+        c.fillRect(4, 6, 11, 12);
+        c.fillStyle = '#22c55e';
+        c.fillRect(-15, 17, 11, 11);
+        c.fillRect(4, 17, 11, 11);
+        c.fillStyle = '#0f172a';
+        c.fillRect(-17, 26, 13, 7);
+        c.fillRect(4, 26, 13, 7);
+
+        // Tronco neon
+        c.fillStyle = '#eab308';
+        c.beginPath();
+        c.roundRect(-17, -18, 34, 26, 6);
+        c.fill();
+
+        c.fillStyle = '#0f172a';
+        c.font = 'bold 13px sans-serif';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText('1', 0, -4);
+
+        // Cabeça
+        c.fillStyle = skin;
+        c.beginPath();
+        c.arc(0, -25, 12, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = hair;
+        c.beginPath();
+        c.arc(0, -29, 11.5, Math.PI, Math.PI * 2);
+        c.fill();
+
+        // Braços abertos com Luvas Grandes
+        c.fillStyle = '#eab308';
+        c.fillRect(-24, -14, 8, 12);
+        c.fillStyle = '#22c55e';
+        c.beginPath();
+        c.roundRect(-30, -8, 13, 14, 4);
+        c.fill();
+        c.strokeStyle = '#ffffff';
+        c.lineWidth = 1.2;
+        c.stroke();
+
+        c.fillStyle = '#eab308';
+        c.fillRect(16, -14, 8, 12);
+        c.fillStyle = '#22c55e';
+        c.beginPath();
+        c.roundRect(17, -8, 13, 14, 4);
+        c.fill();
+        c.strokeStyle = '#ffffff';
+        c.lineWidth = 1.2;
+        c.stroke();
+    }
+
+    c.restore();
+}
+
 function drawMiniJersey(team, c) {
     c.clearRect(0, 0, 38, 38);
     c.save();
@@ -968,6 +1162,24 @@ function initWeatherParticles() {
 // =========================================================
 // PARTÍCULAS E EFEITOS ESPECIAIS
 // =========================================================
+
+function addDustPuff(x, y, count = 2) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            type: 'dust',
+            x: x + (Math.random() - 0.5) * 8,
+            y: y + 16 + (Math.random() - 0.5) * 4,
+            vx: (Math.random() - 0.5) * 25,
+            vy: 35 + Math.random() * 25,
+            size: Math.random() * 4 + 7,
+            growth: 14,
+            color: 'rgba(255, 255, 255, 0.75)',
+            life: 0.45,
+            decay: 1.8
+        });
+    }
+}
+
 function addGrassDust(x, y, count = 3) {
     for (let i = 0; i < count; i++) {
         particles.push({
@@ -1055,7 +1267,18 @@ function updateParticles(dt) {
         const p = particles[i];
         p.life -= p.decay * dt;
 
-        if (p.type === 'confetti') {
+        if (p.type === 'dust') {
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.size += p.growth * dt;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.life * 0.7);
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        } else if (p.type === 'confetti') {
             p.x += p.vx * dt;
             p.y += p.vy * dt;
             p.vy += p.gravity * dt;
@@ -1542,43 +1765,33 @@ function collectPickup(p) {
 }
 
 // =========================================================
-// ZAGUEIROS (MOVIMENTAÇÃO ESTATÉGICA DE FUTEBOL)
+// ZAGUEIROS ESTILO TOUCHDOWN HERO (PERSEGUIÇÃO E BOTES AGRESSIVOS)
 // =========================================================
+let playerPuffTimer = 0;
+
 function spawnDefendersIfNeeded() {
     if (gameState !== STATE.RUNNING) return;
 
     if (stageDist >= nextSpawnDist) {
-        // Quantidade amigável na fase 1 e calibrada gradativamente
-        const maxOnScreen = stage === 1 ? 2 : (stage === 2 ? 3 : 4);
+        const rivalTeam = profile.teamId === 'flamengo' ? TEAMS.find(t => t.id === 'corinthians') : TEAMS.find(t => t.id === 'flamengo');
+        const laneW = (width - pitchMargin * 2) / 3;
 
-        if (defenders.length < maxOnScreen) {
-            const laneW = (width - pitchMargin * 2) / 3;
+        // Ondas táticas calibradas por fase
+        const waveType = Math.random();
+
+        if (waveType < 0.45 || defenders.length === 0) {
+            // TIPO 1: BLITZ HUNTER (Caçador implacável que rastreia a posição X do jogador)
             const lane = Math.floor(Math.random() * 3);
             const posX = pitchMargin + (lane + 0.5) * laneW;
-
-            let style = 'JOCKEY';
-            const rand = Math.random();
-            const stadium = getCurrentStadium();
-
-            if (stadium.weather === 'rain' && rand < 0.65) {
-                style = 'SLIDER';
-            } else if (stageDist > 300 && rand < 0.45) {
-                style = 'SLIDER';
-            } else if (stageDist > 150 && rand < 0.75) {
-                style = 'CHASER';
-            }
-
-            // Uniforme rival contrastante
-            const rivalTeam = profile.teamId === 'flamengo' ? TEAMS.find(t => t.id === 'corinthians') : TEAMS.find(t => t.id === 'flamengo');
-
             defenders.push({
                 x: posX,
-                y: -70,
+                y: -75,
                 radius: 20,
-                style,
+                type: 'HUNTER',
                 state: 'NORMAL',
                 stateTimer: 0,
-                vx: (Math.random() < 0.5 ? 1 : -1) * (55 + Math.min(stage, 6) * 12),
+                baseVy: scrollSpeed * 0.45 + (stage * 12),
+                trackingSpd: 85 + Math.min(stage, 6) * 16,
                 tackleVx: 0,
                 tackleVy: 0,
                 runCycle: 0,
@@ -1586,9 +1799,61 @@ function spawnDefendersIfNeeded() {
                 number: [3, 4, 5, 2][Math.floor(Math.random() * 4)],
                 dodged: false
             });
+        } else if (waveType < 0.78) {
+            // TIPO 2: PINÇA DAS PONTAS (Dois zagueiros fechando as pontas em direção ao centro)
+            // A trilha de moedas no meio guia o caminho seguro!
+            const d1X = pitchMargin + 25;
+            const d2X = width - pitchMargin - 25;
+            defenders.push({
+                x: d1X,
+                y: -75,
+                radius: 20,
+                type: 'PINCER',
+                state: 'NORMAL',
+                stateTimer: 0,
+                baseVy: scrollSpeed * 0.40 + (stage * 10),
+                pincerDir: 1, // fecha para a direita
+                runCycle: 0,
+                team: rivalTeam,
+                number: 6,
+                dodged: false
+            });
+            defenders.push({
+                x: d2X,
+                y: -95,
+                radius: 20,
+                type: 'PINCER',
+                state: 'NORMAL',
+                stateTimer: 0,
+                baseVy: scrollSpeed * 0.40 + (stage * 10),
+                pincerDir: -1, // fecha para a esquerda
+                runCycle: 0,
+                team: rivalTeam,
+                number: 2,
+                dodged: false
+            });
+        } else {
+            // TIPO 3: CARRINHO DESLIZANTE (SLIDER)
+            const lane = Math.floor(Math.random() * 3);
+            const posX = pitchMargin + (lane + 0.5) * laneW;
+            defenders.push({
+                x: posX,
+                y: -75,
+                radius: 20,
+                type: 'SLIDER',
+                state: 'NORMAL',
+                stateTimer: 0,
+                baseVy: scrollSpeed * 0.35 + (stage * 10),
+                tackleVx: 0,
+                runCycle: 0,
+                team: rivalTeam,
+                number: 4,
+                dodged: false
+            });
         }
 
-        const spacing = Math.max(90, 140 - Math.min(stage, 5) * 8);
+        // Espaçamento calculado
+        const spacing = Math.max(85, 130 - Math.min(stage, 5) * 8);
         nextSpawnDist = stageDist + spacing;
         spawnPickups(stageDist);
     }
@@ -1599,87 +1864,130 @@ function updateDefenders(dt) {
 
     for (let i = defenders.length - 1; i >= 0; i--) {
         const d = defenders[i];
-        d.y += scrollSpeed * timeScale * dt;
-        d.runCycle += 8 * dt * timeScale;
-
+        d.runCycle += 10 * dt * timeScale;
         const distToPlayer = Math.hypot(player.x - d.x, player.y - d.y);
 
-        if (d.style === 'JOCKEY') {
-            d.x += d.vx * timeScale * dt;
-            if (d.x < pitchMargin + 24 || d.x > width - pitchMargin - 24) {
-                d.vx *= -1;
-            }
-        } else if (d.style === 'CHASER') {
+        if (d.type === 'HUNTER') {
             if (d.state === 'NORMAL') {
-                if (distToPlayer < 240 && d.y < player.y) {
+                // Desce no campo acompanhando o ritmo do Touchdown Hero
+                d.y += (scrollSpeed + d.baseVy) * timeScale * dt;
+
+                // Rastreia o jogador horizontalmente (Caçador ativo!)
+                const dx = player.x - d.x;
+                d.x += Math.sign(dx) * Math.min(Math.abs(dx), d.trackingSpd * timeScale * dt);
+
+                // Quando chega na distância de ataque (~220px), prepara o bote!
+                if (distToPlayer < 225 && d.y < player.y - 15) {
                     d.state = 'ALERT';
-                    d.stateTimer = 0.38;
+                    d.stateTimer = 0.30; // 300ms de reação rápida
                     audio.playAlert();
                 }
             } else if (d.state === 'ALERT') {
+                d.y += scrollSpeed * timeScale * dt;
                 d.stateTimer -= dt * timeScale;
                 if (d.stateTimer <= 0) {
                     d.state = 'TACKLING';
                     const angle = Math.atan2(player.y - d.y, player.x - d.x);
-                    const spd = 210 + Math.min(stage, 6) * 15;
+                    const spd = 270 + Math.min(stage, 6) * 20;
                     d.tackleVx = Math.cos(angle) * spd;
-                    d.tackleVy = Math.sin(angle) * spd;
-                    d.stateTimer = 0.85;
+                    d.tackleVy = Math.sin(angle) * spd + scrollSpeed * 0.3;
+                    d.stateTimer = 0.70;
+                    addDustPuff(d.x, d.y + 12, 3);
                 }
             } else if (d.state === 'TACKLING') {
                 d.x += d.tackleVx * timeScale * dt;
-                d.y += d.tackleVy * timeScale * dt;
-                if (stadium.weather === 'rain') addWaterSplash(d.x, d.y + 12, 2);
-                else addGrassDust(d.x, d.y + 10, 1);
+                d.y += (d.tackleVy + scrollSpeed * 0.4) * timeScale * dt;
+                addDustPuff(d.x, d.y + 12, 1);
                 d.stateTimer -= dt * timeScale;
                 if (d.stateTimer <= 0) {
                     d.state = 'STUMBLED';
-                    d.stateTimer = 0.8;
+                    d.stateTimer = 1.2;
+                    addDustPuff(d.x, d.y, 4);
                 }
+            } else if (d.state === 'STUMBLED') {
+                d.y += scrollSpeed * 0.7 * timeScale * dt;
+                d.stateTimer -= dt * timeScale;
             }
-        } else if (d.style === 'SLIDER') {
+        } else if (d.type === 'PINCER') {
             if (d.state === 'NORMAL') {
-                if (distToPlayer < 210 && Math.abs(player.y - d.y) < 170) {
+                d.y += (scrollSpeed + d.baseVy) * timeScale * dt;
+                // Fecha o meio progressivamente
+                d.x += d.pincerDir * (90 + stage * 12) * timeScale * dt;
+
+                if (distToPlayer < 200 && d.y < player.y) {
                     d.state = 'ALERT';
-                    d.stateTimer = 0.32;
+                    d.stateTimer = 0.28;
                     audio.playAlert();
                 }
             } else if (d.state === 'ALERT') {
+                d.y += scrollSpeed * timeScale * dt;
                 d.stateTimer -= dt * timeScale;
                 if (d.stateTimer <= 0) {
                     d.state = 'TACKLING';
-                    const dirX = player.x > d.x ? 1 : -1;
-                    d.tackleVx = dirX * (250 + Math.min(stage, 6) * 15);
+                    d.tackleVx = d.pincerDir * (240 + stage * 15);
+                    d.tackleVy = 180;
                     d.stateTimer = 0.65;
                 }
             } else if (d.state === 'TACKLING') {
                 d.x += d.tackleVx * timeScale * dt;
-                if (stadium.weather === 'rain') addWaterSplash(d.x, d.y + 14, 3);
-                else addGrassDust(d.x, d.y + 12, 2);
+                d.y += (d.tackleVy + scrollSpeed * 0.5) * timeScale * dt;
+                addDustPuff(d.x, d.y + 12, 2);
                 d.stateTimer -= dt * timeScale;
                 if (d.stateTimer <= 0) {
                     d.state = 'STUMBLED';
-                    d.stateTimer = 0.8;
+                    d.stateTimer = 1.0;
                 }
+            } else if (d.state === 'STUMBLED') {
+                d.y += scrollSpeed * 0.7 * timeScale * dt;
+            }
+        } else if (d.type === 'SLIDER') {
+            if (d.state === 'NORMAL') {
+                d.y += (scrollSpeed + d.baseVy) * timeScale * dt;
+                if (distToPlayer < 210 && Math.abs(player.y - d.y) < 170) {
+                    d.state = 'ALERT';
+                    d.stateTimer = 0.28;
+                    audio.playAlert();
+                }
+            } else if (d.state === 'ALERT') {
+                d.y += scrollSpeed * timeScale * dt;
+                d.stateTimer -= dt * timeScale;
+                if (d.stateTimer <= 0) {
+                    d.state = 'TACKLING';
+                    const dirX = player.x > d.x ? 1 : -1;
+                    d.tackleVx = dirX * (280 + Math.min(stage, 6) * 18);
+                    d.stateTimer = 0.65;
+                }
+            } else if (d.state === 'TACKLING') {
+                d.x += d.tackleVx * timeScale * dt;
+                d.y += scrollSpeed * timeScale * dt;
+                if (stadium.weather === 'rain') addWaterSplash(d.x, d.y + 14, 3);
+                else addDustPuff(d.x, d.y + 12, 3);
+                d.stateTimer -= dt * timeScale;
+                if (d.stateTimer <= 0) {
+                    d.state = 'STUMBLED';
+                    d.stateTimer = 1.0;
+                }
+            } else if (d.state === 'STUMBLED') {
+                d.y += scrollSpeed * 0.7 * timeScale * dt;
             }
         }
 
-        // Drible bem sucedido
+        // Drible no Limite! (Dodge do Touchdown Hero)
         if (!d.dodged && (d.y > player.y + 26 || d.state === 'STUMBLED')) {
             d.dodged = true;
             dribbles++;
             score += 150;
             scoreEl.textContent = score;
-            showToast('⚽ DRIBLE!', '+150 PTS');
+            showToast('⚽ DRIBLE NO LIMITE!', '+150 PTS');
         }
 
-        // Colisão
-        if (gameState === STATE.RUNNING) {
+        // Colisão com o Jogador
+        if (gameState === STATE.RUNNING && d.state !== 'STUMBLED') {
             if (distToPlayer < player.radius + d.radius - 4) {
                 if (superSpeedTimer > 0) {
                     d.state = 'STUMBLED';
-                    d.vx *= -2;
-                    addGrassDust(d.x, d.y, 6);
+                    d.vx = -d.vx;
+                    addDustPuff(d.x, d.y, 6);
                     audio.playWhoosh();
                     showToast('💥 ATROPELOU!', '+200 PTS');
                     score += 200;
@@ -1697,10 +2005,10 @@ function updateDefenders(dt) {
             hair: HAIRS[0],
             number: d.number,
             runCycle: d.runCycle,
-            isSliding: d.state === 'TACKLING' && d.style === 'SLIDER'
+            isSliding: d.state === 'TACKLING' && (d.type === 'SLIDER' || d.type === 'PINCER')
         });
 
-        // Balão de alerta '!'
+        // Balão de Alerta '!'
         if (d.state === 'ALERT') {
             ctx.save();
             ctx.fillStyle = '#ef4444';
@@ -1724,7 +2032,7 @@ function updateDefenders(dt) {
             ctx.fillText('💫', d.x, d.y - 40);
         }
 
-        if (d.y > height + 80) defenders.splice(i, 1);
+        if (d.y > height + 90) defenders.splice(i, 1);
     }
 }
 
@@ -1746,6 +2054,11 @@ function updatePlayer(dt) {
         player.y = Math.max(minY, Math.min(maxY, player.y));
 
         player.runCycle += 14 * dt * timeScale;
+        playerPuffTimer += dt;
+        if (playerPuffTimer >= 0.09) {
+            playerPuffTimer = 0;
+            addDustPuff(player.x, player.y + 14, 1);
+        }
         player.ballRot += (scrollSpeed * 0.035) * dt * timeScale;
 
         // Giro 360°
@@ -1799,14 +2112,30 @@ function updatePlayer(dt) {
 }
 
 // =========================================================
-// DISPUTA DE PÊNALTI DRAMÁTICA (CLOSE-UP NA CARA DO GOL)
+// DISPUTA DE PÊNALTI FLICK / SWIPE (OPÇÃO A)
 // =========================================================
+let penFlickStart = null;
+let penFlickTrail = [];
+let isPenFlicking = false;
+let netBulgeX = 0;
+let netBulgeTime = 0;
+
 function executePenaltyKick() {
+    if (gameState !== STATE.PENALTY_AIM) return;
+    const targetX = width / 2 + (Math.random() < 0.5 ? -1 : 1) * (goalPost.width * 0.35);
+    executeSwipeKick(targetX, 720, 0);
+}
+
+function executeSwipeKick(targetX, speed, curve) {
     if (gameState !== STATE.PENALTY_AIM) return;
     gameState = STATE.PENALTY_RUNUP;
     penRunUp = 0;
     penaltyUiEl.classList.add('hidden');
-    audio.playKick();
+
+    // Salva parâmetros do chute
+    penBall.targetX = Math.max(goalPost.x + 15, Math.min(goalPost.x + goalPost.width - 15, targetX));
+    penBall.flickSpeed = speed;
+    penBall.curve = curve;
 }
 
 function startPenaltySetup() {
@@ -1816,120 +2145,160 @@ function startPenaltySetup() {
     penRunUp = 0;
     defenders = [];
     pickups = [];
+    penFlickStart = null;
+    penFlickTrail = [];
+    isPenFlicking = false;
+    netBulgeTime = 0;
 
-    // Oculta HUD de corrida
     hudEl.classList.add('hidden');
     controlsEl.classList.add('hidden');
     appEl.classList.add('pen');
 
-    // Trave Gigante em Close-Up
+    // Trave Próxima e Imponente
+    goalPost.width = Math.min(width * 0.90, 390);
+    goalPost.x = (width - goalPost.width) / 2;
     goalPost.y = 85;
     goalPost.height = 145;
-    goalPost.width = Math.min(width * 0.90, 390);
     goalPost.postThickness = 8;
 
-    // Jogador PARADO na marca da cal
+    // Jogador PARADO na cal
     player.x = width / 2;
     player.y = height - 125;
     player.targetX = player.x;
     player.targetY = player.y;
 
-    // Bola parada na marca do pênalti
+    // Bola na marca da cal
     penBall.x = width / 2;
     penBall.y = height - 180;
+    penBall.z = 0;       // altitude 3D
+    penBall.vz = 0;
     penBall.scale = 1.25;
     penBall.vx = 0;
     penBall.vy = 0;
+    penBall.curve = 0;
+    penBall.isGoal = false;
 
-    // Goleiro na linha da trave
+    // Goleiro em Ginga no centro da trave
     goalie.x = width / 2;
-    goalie.y = goalPost.y + goalPost.height - 20;
-    goalie.vx = 90 + Math.min(stage - 1, 6) * 18;
-    goalie.diveProgress = 0;
+    goalie.y = goalPost.y + goalPost.height - 18;
+    goalie.state = 'IDLE'; // 'IDLE', 'DIVING', 'SAVED', 'CONCEDED'
     goalie.diveDir = 0;
-
-    // Mira inicial oscilando
-    penaltyAim.sweep = 0;
-    penaltyAim.x = width / 2;
-    penaltyAim.y = goalPost.y + goalPost.height * 0.45;
-    penaltyAim.isManual = false;
+    goalie.diveProgress = 0;
+    goalie.bob = 0;
 
     audio.playWhistle(true);
     penaltyUiEl.classList.remove('hidden');
 }
 
-function updatePenalty(dt) {
-    if (gameState === STATE.PENALTY_AIM) {
-        if (!penaltyAim.isManual) {
-            const aimSpeed = getPenaltyAimSpeed();
-            penaltyAim.sweep += aimSpeed * dt;
-            const goalL = (width - goalPost.width) / 2 + 30;
-            const goalR = goalL + goalPost.width - 60;
-            const center = (goalL + goalR) / 2;
-            const radius = (goalR - goalL) / 2;
-            penaltyAim.x = center + Math.sin(penaltyAim.sweep) * radius;
-            penaltyAim.y = goalPost.y + 25 + (Math.sin(penaltyAim.sweep * 1.6) + 1) * 26;
-        }
-
-        goalie.x += goalie.vx * dt;
-        const gkMinX = (width - goalPost.width) / 2 + 35;
-        const gkMaxX = gkMinX + goalPost.width - 70;
-        if (goalie.x < gkMinX) { goalie.x = gkMinX; goalie.vx = Math.abs(goalie.vx); }
-        else if (goalie.x > gkMaxX) { goalie.x = gkMaxX; goalie.vx = -Math.abs(goalie.vx); }
-    } else if (gameState === STATE.PENALTY_KICK) {
-        penBall.x += penBall.vx * dt;
-        penBall.y += penBall.vy * dt;
-        penBall.scale = Math.max(0.72, penBall.scale - 0.75 * dt);
-        addGrassDust(penBall.x, penBall.y, 1);
-
-        goalie.x += goalie.diveDir * (190 + Math.min(stage, 6) * 20) * dt;
-
-        checkPenaltyCollision();
-    }
-}
-
 function startPenaltyShot() {
-    const dx = penaltyAim.x - penBall.x;
-    const dy = penaltyAim.y - penBall.y;
+    const dx = penBall.targetX - penBall.x;
+    const dy = (goalPost.y + goalPost.height - 15) - penBall.y;
     const dist = Math.hypot(dx, dy) || 1;
-    const speed = 720;
+    const speed = penBall.flickSpeed || 720;
 
     penBall.vx = (dx / dist) * speed;
     penBall.vy = (dy / dist) * speed;
+    penBall.vz = 280; // Elevação 3D no ar
 
-    const aimSide = penaltyAim.x > width / 2 ? 1 : -1;
-    const guessChance = Math.min(0.55, 0.22 + (stage - 1) * 0.07);
+    // Goleiro reage ao chute com salto acrobático real!
+    const targetSide = penBall.targetX > width / 2 ? 1 : -1;
+
+    // Chance do goleiro acertar o lado baseada na fase
+    // Fase 1: apenas 28% de chance de adivinhar o canto certo!
+    const guessChance = Math.min(0.55, 0.28 + (stage - 1) * 0.07);
     const gkGuessedRight = Math.random() < guessChance;
-    goalie.diveDir = gkGuessedRight ? aimSide : -aimSide;
+
+    goalie.state = 'DIVING';
+    goalie.diveDir = gkGuessedRight ? targetSide : -targetSide;
+    goalie.diveProgress = 0;
+    goalie.targetJumpX = width / 2 + goalie.diveDir * (goalPost.width * 0.38);
+
+    audio.playKick();
+    addDustPuff(player.x, player.y + 12, 4);
+}
+
+function updatePenalty(dt) {
+    if (gameState === STATE.PENALTY_AIM) {
+        // Ginga de goleiro na linha
+        goalie.bob += 5 * dt;
+        goalie.x = width / 2 + Math.sin(goalie.bob) * 16;
+    } else if (gameState === STATE.PENALTY_RUNUP) {
+        penRunUp += 4.5 * dt;
+        player.runCycle += 22 * dt;
+        player.x += (penBall.x - player.x) * 0.28;
+        player.y += ((penBall.y + 16) - player.y) * 0.28;
+
+        if (penRunUp >= 1.0) {
+            gameState = STATE.PENALTY_KICK;
+            startPenaltyShot();
+        }
+    } else if (gameState === STATE.PENALTY_KICK) {
+        // Bola em vôo 3D
+        penBall.x += penBall.vx * dt;
+        penBall.y += penBall.vy * dt;
+        // Efeito curva
+        penBall.x += (penBall.curve * 0.8) * dt;
+
+        // Física de elevação vertical
+        penBall.z = Math.max(0, penBall.z + penBall.vz * dt);
+        penBall.vz -= 520 * dt;
+
+        // Salto do goleiro
+        goalie.diveProgress += 2.6 * dt;
+        goalie.x += (goalie.targetJumpX - goalie.x) * Math.min(1, 8 * dt);
+
+        checkPenaltyCollision();
+    }
+
+    if (netBulgeTime > 0) {
+        netBulgeTime -= dt;
+    }
 }
 
 function checkPenaltyCollision() {
-    const distToGk = Math.hypot(penBall.x - goalie.x, penBall.y - goalie.y);
-    const saveRadius = Math.min(28, 22 + (stage - 1) * 1.2);
-    if (distToGk < saveRadius) {
-        screenShake = 16;
-        audio.playWhistle(true);
-        triggerGameOver('O GOLEIRO ESPALMOU NO ÂNGULO!');
-        return;
-    }
-
-    const goalL = (width - goalPost.width) / 2;
+    const goalL = goalPost.x;
     const goalR = goalL + goalPost.width;
+    const goalLineY = goalPost.y + goalPost.height - 12;
 
-    if (penBall.y <= goalPost.y + goalPost.height - 10) {
-        const isNearLeftPost = Math.abs(penBall.x - goalL) < 14;
-        const isNearRightPost = Math.abs(penBall.x - goalR) < 14;
-        const isNearCrossbar = Math.abs(penBall.y - goalPost.y) < 14;
+    // Checa colisão quando a bola atinge a linha do gol
+    if (penBall.y <= goalLineY) {
+        const ballScreenX = penBall.x;
+
+        // 1. Defesa do Goleiro
+        const gkReachX = goalie.x + (goalie.diveDir * 28);
+        const distToGloves = Math.abs(ballScreenX - gkReachX);
+
+        if (goalie.state === 'DIVING' && distToGloves < 34) {
+            goalie.state = 'SAVED';
+            penBall.vx = -penBall.vx * 0.5;
+            penBall.vy = 260; // rebate pra fora
+            penBall.vz = 180;
+            screenShake = 18;
+            audio.playAlert();
+            audio.playWhistle(true);
+            triggerGameOver('O GOLEIRO ESPALMOU NO ÂNGULO!');
+            return;
+        }
+
+        // 2. Trave e Travessão
+        const isNearLeftPost = Math.abs(ballScreenX - goalL) < 14;
+        const isNearRightPost = Math.abs(ballScreenX - goalR) < 14;
+        const isNearCrossbar = penBall.z > 58 && Math.abs(penBall.y - goalPost.y) < 18;
 
         if (isNearLeftPost || isNearRightPost || isNearCrossbar) {
-            screenShake = 22;
+            screenShake = 24;
             audio.playPostHit();
             audio.playWhistle(true);
+            penBall.vy = 200;
             triggerGameOver('💥 CHUTOU NA TRAVE! QUE PENA!');
             return;
         }
 
-        if (penBall.x >= goalL + 12 && penBall.x <= goalR - 12) {
+        // 3. Gol Válido!
+        if (ballScreenX >= goalL + 14 && ballScreenX <= goalR - 14) {
+            goalie.state = 'CONCEDED';
+            netBulgeX = ballScreenX;
+            netBulgeTime = 1.2;
             handleGoalSuccess();
         } else {
             screenShake = 14;
@@ -1947,53 +2316,27 @@ function handleGoalSuccess() {
 
     audio.playGoalFanfare();
     addConfetti(120);
-    screenShake = 18;
+    screenShake = 20;
 
-    showBanner('goal', 'GOLAÇO!', 'GOOOOOOL!', '+500 PONTOS!');
+    showBanner('goal', 'GOLAÇO NA GAVETA!', 'GOOOOOOL!', '+500 PONTOS!');
 
     setTimeout(() => {
         advanceToNextStage();
     }, 2400);
 }
 
-function advanceToNextStage() {
-    stage++;
-    stageDist = 0;
-    gameState = STATE.RUNNING;
-
-    hudEl.classList.remove('hidden');
-    controlsEl.classList.remove('hidden');
-    penaltyUiEl.classList.add('hidden');
-    appEl.classList.remove('pen');
-
-    const stadium = getCurrentStadium();
-    stageNumEl.textContent = `FASE ${stage}`;
-    if (stadiumNameEl) stadiumNameEl.textContent = stadium.name;
-    progTxtEl.textContent = `0m / 1000m`;
-    progFillEl.style.width = '0%';
-    progBallEl.style.left = '0%';
-
-    player.x = width / 2;
-    player.y = height - 130;
-    player.targetX = player.x;
-    player.targetY = player.y;
-
-    defenders = [];
-    pickups = [];
-    nextSpawnDist = 40;
-
-    showBanner('stage', stadium.name, `FASE ${stage}`, 'Drible a zaga e avance ao próximo gol!');
-}
-
 function drawPenaltyScene() {
     if (gameState === STATE.RUNNING || gameState === STATE.MENU) return;
 
-    const goalL = (width - goalPost.width) / 2;
+    const goalL = goalPost.x;
     const goalR = goalL + goalPost.width;
 
     ctx.save();
 
-    // 1. Grande Área em Close-Up
+    // 1. Torcida vibrando com bandeiras no fundo
+    drawCrowdBanners(goalL, goalR, goalPost.y - 45);
+
+    // 2. Grande Área em Close-Up
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.lineWidth = 3.5;
     const boxW = Math.min(width * 0.96, goalPost.width + 50);
@@ -2010,7 +2353,7 @@ function drawPenaltyScene() {
     ctx.arc(width / 2, height - 180, 50, Math.PI, 0);
     ctx.stroke();
 
-    // 2. Rede 3D com Profundidade
+    // 3. Rede 3D com Efeito de Estufar no Gol
     ctx.fillStyle = 'rgba(255, 255, 255, 0.20)';
     ctx.fillRect(goalL, goalPost.y, goalPost.width, goalPost.height);
 
@@ -2018,7 +2361,11 @@ function drawPenaltyScene() {
     ctx.lineWidth = 1.2;
     for (let x = goalL; x <= goalR; x += 16) {
         ctx.beginPath();
-        ctx.moveTo(x, goalPost.y);
+        let bulge = 0;
+        if (netBulgeTime > 0 && Math.abs(x - netBulgeX) < 45) {
+            bulge = (1 - Math.abs(x - netBulgeX) / 45) * 18 * Math.min(1, netBulgeTime * 2);
+        }
+        ctx.moveTo(x, goalPost.y - bulge);
         ctx.lineTo(x, goalPost.y + goalPost.height);
         ctx.stroke();
     }
@@ -2029,7 +2376,7 @@ function drawPenaltyScene() {
         ctx.stroke();
     }
 
-    // Postes e Travessão Brancos e Espessos
+    // Postes e Travessão
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = goalPost.postThickness;
     ctx.beginPath();
@@ -2041,66 +2388,112 @@ function drawPenaltyScene() {
 
     // Rótulos de Canto / Gaveta
     if (gameState === STATE.PENALTY_AIM) {
-        ctx.font = 'bold 10px sans-serif';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.85)';
         ctx.textAlign = 'left';
-        ctx.fillText('GAVETA ESQ', goalL + 10, goalPost.y + 20);
+        ctx.fillText('GAVETA ESQ', goalL + 12, goalPost.y + 22);
         ctx.textAlign = 'right';
-        ctx.fillText('GAVETA DIR', goalR - 10, goalPost.y + 20);
+        ctx.fillText('GAVETA DIR', goalR - 12, goalPost.y + 22);
         ctx.textAlign = 'left';
-        ctx.fillText('CANTO ESQ', goalL + 10, goalPost.y + goalPost.height - 15);
+        ctx.fillText('CANTO ESQ', goalL + 12, goalPost.y + goalPost.height - 15);
         ctx.textAlign = 'right';
-        ctx.fillText('CANTO DIR', goalR - 10, goalPost.y + goalPost.height - 15);
+        ctx.fillText('CANTO DIR', goalR - 12, goalPost.y + goalPost.height - 15);
     }
 
     ctx.restore();
 
-    // 3. Goleiro Imponente
-    drawSoccerPlayer(ctx, goalie.x, goalie.y, {
-        team: TEAMS[0],
-        skin: SKINS[0],
-        hair: HAIRS[0],
-        number: 1,
-        isGoalkeeper: true
+    // 4. Goleiro Dramático com Salto Real
+    drawGoalkeeper(ctx, goalie.x, goalie.y, {
+        state: goalie.state,
+        diveDir: goalie.diveDir,
+        diveProgress: goalie.diveProgress,
+        bob: goalie.bob
     });
 
-    // 4. Bola de Futebol 3D
-    drawBallSprite(ctx, penBall.x, penBall.y, 16 * penBall.scale);
+    // 5. Bola com Elevação 3D e Sombra Projetada
+    const shadowAlpha = Math.max(0.08, 0.35 * (1 - (penBall.z || 0) / 90));
+    ctx.beginPath();
+    ctx.ellipse(penBall.x, penBall.y + 8, 14 * penBall.scale, 6 * penBall.scale, 0, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`;
+    ctx.fill();
 
-    // 5. Jogador e Alvo
+    const ballVisualY = penBall.y - (penBall.z || 0);
+    const ballVisualScale = penBall.scale * (1 + (penBall.z || 0) / 140);
+    drawBallSprite(ctx, penBall.x, ballVisualY, 15 * ballVisualScale);
+
+    // 6. Jogador Vicente
+    drawSoccerPlayer(ctx, player.x, player.y, {
+        team: profile.getTeam(),
+        skin: profile.skin,
+        hair: profile.hair,
+        number: profile.number,
+        runCycle: gameState === STATE.PENALTY_RUNUP ? player.runCycle : 0
+    });
+
+    // 7. Trajetória / Laser do Gesto de Chute (Flick Guidance)
     if (gameState === STATE.PENALTY_AIM) {
-        drawSoccerPlayer(ctx, player.x, player.y, {
-            team: profile.getTeam(),
-            skin: profile.skin,
-            hair: profile.hair,
-            number: profile.number,
-            runCycle: 0
-        });
+        drawFlickGuidance();
+    }
+}
 
-        // Laser de Trajetória
-        ctx.save();
-        ctx.strokeStyle = 'rgba(250, 204, 21, 0.85)';
+function drawCrowdBanners(left, right, y) {
+    ctx.save();
+    const t = performance.now() * 0.003;
+    const bannerW = (right - left) / 4;
+    for (let i = 0; i < 4; i++) {
+        const bx = left + i * bannerW;
+        const wave = Math.sin(t + i) * 4;
+        ctx.fillStyle = i % 2 === 0 ? '#0f172a' : '#dc2626';
+        ctx.fillRect(bx + 4, y + wave, bannerW - 8, 20);
+        // Cruz de Malta / Estrela no banner
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('CRVG', bx + bannerW / 2, y + wave + 14);
+    }
+    ctx.restore();
+}
+
+function drawFlickGuidance() {
+    ctx.save();
+    if (penFlickTrail.length > 1) {
+        // Laser dinâmico acompanhando o dedo do jogador em tempo real!
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = '#facc15';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(penFlickTrail[0].x, penFlickTrail[0].y);
+        for (let i = 1; i < penFlickTrail.length; i++) {
+            ctx.lineTo(penFlickTrail[i].x, penFlickTrail[i].y);
+        }
+        ctx.stroke();
+
+        // Alvo na ponta
+        const tip = penFlickTrail[penFlickTrail.length - 1];
+        ctx.beginPath();
+        ctx.arc(tip.x, tip.y, 8, 0, Math.PI * 2);
+        ctx.fillStyle = '#ef4444';
+        ctx.fill();
+    } else {
+        // Seta suave convidando o jogador a arrastar
+        const t = performance.now() * 0.004;
+        const arrowOffset = Math.sin(t * 2) * 10;
+        ctx.strokeStyle = 'rgba(250, 204, 21, 0.7)';
         ctx.lineWidth = 2.5;
         ctx.setLineDash([8, 6]);
         ctx.beginPath();
-        ctx.moveTo(penBall.x, penBall.y);
-        ctx.lineTo(penaltyAim.x, penaltyAim.y);
-        ctx.stroke();
-
-        // Alvo Reticular
-        ctx.strokeStyle = '#ef4444';
-        ctx.lineWidth = 3;
-        ctx.setLineDash([]);
-        ctx.beginPath();
-        ctx.arc(penaltyAim.x, penaltyAim.y, 16, 0, Math.PI * 2);
+        ctx.moveTo(penBall.x, penBall.y - 20);
+        ctx.lineTo(penBall.x, penBall.y - 90 + arrowOffset);
         ctx.stroke();
 
         ctx.fillStyle = '#facc15';
         ctx.beginPath();
-        ctx.arc(penaltyAim.x, penaltyAim.y, 6, 0, Math.PI * 2);
+        ctx.arc(penBall.x, penBall.y - 95 + arrowOffset, 6, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
     }
+    ctx.restore();
 }
 
 // =========================================================
@@ -2483,11 +2876,13 @@ canvas.addEventListener('touchstart', (e) => {
             playerOriginX = player.x;
             playerOriginY = player.y;
         }
-    } else if (gameState === STATE.PENALTY_AIM) {
+    } else if (gameState === STATE.PENALTY_AIM && e.touches.length > 0) {
         const rect = canvas.getBoundingClientRect();
-        penaltyAim.x = e.touches[0].clientX - rect.left;
-        penaltyAim.y = Math.min(goalPost.y + goalPost.height, Math.max(goalPost.y + 10, e.touches[0].clientY - rect.top));
-        penaltyAim.isManual = true;
+        const px = e.touches[0].clientX - rect.left;
+        const py = e.touches[0].clientY - rect.top;
+        isPenFlicking = true;
+        penFlickStart = { x: px, y: py, t: performance.now() };
+        penFlickTrail = [{ x: px, y: py }];
     }
 }, { passive: true });
 
@@ -2497,16 +2892,37 @@ canvas.addEventListener('touchmove', (e) => {
         const dy = e.touches[0].clientY - touchOriginY;
         player.targetX = playerOriginX + dx;
         player.targetY = playerOriginY + dy;
-    } else if (gameState === STATE.PENALTY_AIM && e.touches.length > 0) {
+    } else if (gameState === STATE.PENALTY_AIM && isPenFlicking && e.touches.length > 0) {
         const rect = canvas.getBoundingClientRect();
-        penaltyAim.x = e.touches[0].clientX - rect.left;
-        penaltyAim.y = Math.min(goalPost.y + goalPost.height, Math.max(goalPost.y + 10, e.touches[0].clientY - rect.top));
-        penaltyAim.isManual = true;
+        const px = e.touches[0].clientX - rect.left;
+        const py = e.touches[0].clientY - rect.top;
+        penFlickTrail.push({ x: px, y: py });
     }
 }, { passive: true });
 
-canvas.addEventListener('touchend', () => {
+canvas.addEventListener('touchend', (e) => {
     isTouching = false;
+    if (gameState === STATE.PENALTY_AIM && isPenFlicking && penFlickTrail.length > 1) {
+        isPenFlicking = false;
+        const start = penFlickStart;
+        const end = penFlickTrail[penFlickTrail.length - 1];
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        if (dy < -25) {
+            const dtSec = Math.max(0.06, (performance.now() - start.t) / 1000);
+            const rawSpeed = (Math.hypot(dx, dy) / dtSec) * 1.15;
+            const flickSpeed = Math.min(950, Math.max(540, rawSpeed));
+
+            let maxDeviation = 0;
+            const strokeDist = Math.hypot(dx, dy) || 1;
+            for (let p of penFlickTrail) {
+                const dev = ((end.y - start.y) * p.x - (end.x - start.x) * p.y + end.x * start.y - end.y * start.x) / strokeDist;
+                if (Math.abs(dev) > Math.abs(maxDeviation)) maxDeviation = dev;
+            }
+            const curve = Math.max(-180, Math.min(180, maxDeviation * 3.8));
+            executeSwipeKick(end.x, flickSpeed, curve);
+        }
+    }
 });
 
 // Suporte com Mouse
@@ -2521,9 +2937,11 @@ canvas.addEventListener('mousedown', (e) => {
         playerOriginY = player.y;
     } else if (gameState === STATE.PENALTY_AIM) {
         const rect = canvas.getBoundingClientRect();
-        penaltyAim.x = e.clientX - rect.left;
-        penaltyAim.y = Math.min(goalPost.y + goalPost.height, Math.max(goalPost.y + 10, e.clientY - rect.top));
-        penaltyAim.isManual = true;
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+        isPenFlicking = true;
+        penFlickStart = { x: px, y: py, t: performance.now() };
+        penFlickTrail = [{ x: px, y: py }];
     }
 });
 
@@ -2533,15 +2951,38 @@ window.addEventListener('mousemove', (e) => {
         const dy = e.clientY - touchOriginY;
         player.targetX = playerOriginX + dx;
         player.targetY = playerOriginY + dy;
-    } else if (gameState === STATE.PENALTY_AIM && isMouseDown) {
+    } else if (gameState === STATE.PENALTY_AIM && isPenFlicking) {
         const rect = canvas.getBoundingClientRect();
-        penaltyAim.x = e.clientX - rect.left;
-        penaltyAim.y = Math.min(goalPost.y + goalPost.height, Math.max(goalPost.y + 10, e.clientY - rect.top));
-        penaltyAim.isManual = true;
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+        penFlickTrail.push({ x: px, y: py });
     }
 });
 
-window.addEventListener('mouseup', () => { isMouseDown = false; });
+window.addEventListener('mouseup', () => {
+    isMouseDown = false;
+    if (gameState === STATE.PENALTY_AIM && isPenFlicking && penFlickTrail.length > 1) {
+        isPenFlicking = false;
+        const start = penFlickStart;
+        const end = penFlickTrail[penFlickTrail.length - 1];
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        if (dy < -25) {
+            const dtSec = Math.max(0.06, (performance.now() - start.t) / 1000);
+            const rawSpeed = (Math.hypot(dx, dy) / dtSec) * 1.15;
+            const flickSpeed = Math.min(950, Math.max(540, rawSpeed));
+
+            let maxDeviation = 0;
+            const strokeDist = Math.hypot(dx, dy) || 1;
+            for (let p of penFlickTrail) {
+                const dev = ((end.y - start.y) * p.x - (end.x - start.x) * p.y + end.x * start.y - end.y * start.x) / strokeDist;
+                if (Math.abs(dev) > Math.abs(maxDeviation)) maxDeviation = dev;
+            }
+            const curve = Math.max(-180, Math.min(180, maxDeviation * 3.8));
+            executeSwipeKick(end.x, flickSpeed, curve);
+        }
+    }
+});
 
 // Teclado
 window.addEventListener('keydown', (e) => {

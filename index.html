@@ -78,10 +78,16 @@
         <div id="banner-sub"></div>
     </div>
 
-    <!-- Interface da Disputa de Pênalti (Close-up) -->
+    <!-- Interface da Disputa de Pênalti (Close-up & Flick) -->
     <div id="penalty-ui" class="hidden">
-        <div class="pen-hint">🎯 <b>DISPUTA DE PÊNALTI!</b> Toque ou arraste para mirar nos cantos</div>
-        <button id="shoot-btn" class="btn btn-primary btn-kick" type="button">⚽ BATER O PÊNALTI!</button>
+        <div class="pen-flick-banner">
+            <div class="pen-flick-icon">👆</div>
+            <div class="pen-flick-content">
+                <div class="pen-flick-title">DESLIZE NA BOLA PARA CHUTAR!</div>
+                <div class="pen-flick-sub">Arraste reto para uma bomba ou faça curva na gaveta!</div>
+            </div>
+        </div>
+        <button id="shoot-btn" class="btn btn-primary btn-kick hidden" type="button">⚽ BATER O PÊNALTI!</button>
     </div>
 
     <div id="fade"></div>
@@ -89,13 +95,9 @@
     <!-- MENU PRINCIPAL -->
     <div id="menu" class="screen">
         <div class="menu-inner">
-            <div class="logo-box">
-                <div class="logo-top-badge">⭐ EDIÇÃO BRASIL 2026 ⭐</div>
-                <div class="logo">
-                    <img class="logo-app-icon" src="icon.svg" alt="Craque Hero Ícone" width="60" height="60">
-                    <h1>CRAQUE<br><span>HERO</span></h1>
-                </div>
-                <p class="tagline">Drible a zaga. Chegue na área. Faça o gol.</p>
+            <!-- Capa Oficial Craque Hero -->
+            <div class="menu-cover-container">
+                <img src="cover.png" alt="Craque Hero" class="menu-cover-img">
             </div>
 
             <!-- Card de Perfil do Jogador -->
