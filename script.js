@@ -327,6 +327,26 @@ class AudioManager {
             osc.stop(this.ctx.currentTime + 0.19);
         } catch (e) {}
     }
+
+    playOle() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+            const t = this.ctx.currentTime;
+            [349.23, 440.0, 523.25, 698.46].forEach((freq, idx) => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, t);
+                osc.frequency.exponentialRampToValueAtTime(freq * 1.08, t + 0.28);
+                gain.gain.setValueAtTime(0.16, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.32);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t + idx * 0.025);
+                osc.stop(t + 0.34);
+            });
+        } catch (e) {}
+    }
 }
 
 const audio = new AudioManager();
@@ -579,20 +599,29 @@ function getCurrentStadium() {
     return STADIUMS[idx];
 }
 
-// CÂMERA DINÂMICA (CAMPO ABRE EM SLOW-MO IGUAL AO TOUCHDOWN HERO)
+// =========================================================
+// MUNDO DO JOGO E CÂMERA DINÂMICA (ESTILO TOUCHDOWN HERO)
+// =========================================================
+let fieldWidth = 560; // Largura total do estádio
+let fieldMargin = 55; // Margem das linhas laterais
+const PIXELS_PER_METER = 4.55; // Calibração precisa de pixels por metro
+
 const camera = {
-    zoom: 1.0,
-    targetZoom: 1.0,
+    x: 280,
+    targetX: 280,
+    zoom: 1.35,
+    targetZoom: 1.35,
     offsetY: 0,
     targetOffsetY: 0
 };
 
 // Helpers dinâmicos das melhorias do jogador
 function getSlowDrainRate() {
-    return Math.max(14, 28 - (profile.upgrades.slow - 1) * 3);
+    // Drena em ~1.7s (rápido e tenso, estilo Touchdown Hero)
+    return Math.max(38, 58 - (profile.upgrades.slow - 1) * 4.5);
 }
 function getSlowRecoveryRate() {
-    return 24 + (profile.upgrades.slow - 1) * 6;
+    return 36 + (profile.upgrades.slow - 1) * 6;
 }
 function getSpinCooldownMax() {
     return Math.max(2.0, 4.0 - (profile.upgrades.spin - 1) * 0.45);
@@ -1419,8 +1448,16 @@ function resize() {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
 
-    pitchMargin = 16; // 100% largura do campo (sem barras laterais de torcida)
-    goalPost.width = Math.min(width * 0.90, 390);
+    pitchMargin = 16;
+    fieldWidth = Math.max(540, Math.round(width * 1.45));
+    fieldMargin = Math.round(fieldWidth * 0.08); // Margens das linhas laterais
+    pitchMargin = fieldMargin;
+
+    camera.x = fieldWidth / 2;
+    camera.targetX = fieldWidth / 2;
+
+    goalPost.width = Math.min(fieldWidth * 0.70, 390);
+    goalPost.x = (fieldWidth - goalPost.width) / 2;
     goalPost.y = 85;
     goalPost.height = 145;
     goalPost.postThickness = 8;
@@ -1507,6 +1544,23 @@ function addGoldTrail(x, y) {
     });
 }
 
+function addFireParticle(x, y, count = 2) {
+    const colors = ['#f59e0b', '#ef4444', '#facc15', '#ffffff'];
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            type: 'fire',
+            x: x + (Math.random() - 0.5) * 10,
+            y: y + (Math.random() - 0.5) * 8,
+            vx: (Math.random() - 0.5) * 50,
+            vy: (Math.random() - 0.5) * 40 + 35,
+            size: Math.random() * 5 + 3,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            life: 0.38,
+            decay: 2.5
+        });
+    }
+}
+
 function addCoinSparkle(x, y, count = 6) {
     for (let i = 0; i < count; i++) {
         particles.push({
@@ -1584,6 +1638,17 @@ function updateParticles(dt) {
             ctx.fillStyle = p.color;
             ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.7);
             ctx.restore();
+        } else if (p.type === 'fire') {
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.size = Math.max(0.6, p.size - 4 * dt);
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.life * 1.5);
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
         } else {
             p.x += p.vx * dt;
             p.y += p.vy * dt;
@@ -1650,217 +1715,299 @@ function drawTurfSkids(dt) {
 // =========================================================
 function drawPitch(dt = 0.016) {
     const stadium = getCurrentStadium();
-    const margin = 28; // Linha lateral a 28px das bordas
 
-    // Margens ampliadas para suportar o zoom-out (campo aberto) sem bordas pretas
-    const extLeft = -width * 0.5;
-    const extRight = width * 1.5;
-    const extTop = -height * 0.5;
-    const extBottom = height * 1.5;
+    // Margens ampliadas para suportar o zoom-out (campo aberto) sem cortes
+    const extLeft = -width * 0.8;
+    const extRight = fieldWidth + width * 0.8;
+    const extTop = player.y - height * 1.6;
+    const extBottom = player.y + height * 1.6;
     const fullW = extRight - extLeft;
     const fullH = extBottom - extTop;
 
-    // 1. FUNDO DO GRAMADO / PISO TEMÁTICO
+    // 1. FUNDO GERAL DO ESTÁDIO
     ctx.fillStyle = stadium.grassDark;
     ctx.fillRect(extLeft, extTop, fullW, fullH);
 
-    // 2. FAIXAS VERTICAIS DE CORTE DE GRAMA
+    // 2. GRAMADO JOGÁVEL ENTRE AS LINHAS LATERAIS
+    const pitchLeft = fieldMargin;
+    const pitchRight = fieldWidth - fieldMargin;
+    const pitchW = pitchRight - pitchLeft;
+
+    // Faixas verticais de corte de grama (mower stripes)
     const stripeCount = 6;
-    const stripeW = (width - margin * 2) / stripeCount;
+    const stripeW = pitchW / stripeCount;
     for (let i = 0; i < stripeCount; i++) {
         if (i % 2 === 0) {
             ctx.fillStyle = stadium.grassLight;
-            ctx.fillRect(margin + i * stripeW, extTop, stripeW, fullH);
+            ctx.fillRect(pitchLeft + i * stripeW, extTop, stripeW, fullH);
         }
     }
 
-    // 3. FAIXAS HORIZONTAIS DE CORTE COM PARALLAX (SEM CÍRCULOS REPETITIVOS)
+    // Faixas horizontais com parallax sutil do rolo
     const mowingSpacing = 140;
-    const mowOffset = fieldY % mowingSpacing;
+    const mowOffset = (fieldY % mowingSpacing);
     ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
     for (let y = extTop + mowOffset; y < extBottom; y += mowingSpacing) {
-        ctx.fillRect(margin, y, width - margin * 2, mowingSpacing * 0.45);
+        ctx.fillRect(pitchLeft, y, pitchW, mowingSpacing * 0.45);
     }
 
-    // 4. TEXTURA DETALHADA DO PISO (TERRA BATIDA, NEVE OU CHUVA)
-    if (stadium.type === 'dirt') {
-        // Manchas de terra batida e grama gasta
-        ctx.fillStyle = 'rgba(122, 62, 27, 0.45)';
-        for (let i = 0; i < 18; i++) {
-            const rx = margin + (Math.sin(i * 123) * 0.5 + 0.5) * (width - margin * 2);
-            const ry = extTop + (((i * 95 + fieldY * 0.5) % fullH + fullH) % fullH);
-            ctx.beginPath();
-            ctx.ellipse(rx, ry, 28, 12, 0.2, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    } else if (stadium.type === 'snow') {
-        // Cristais de gelo e neve acumulada
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-        for (let i = 0; i < 20; i++) {
-            const rx = margin + (Math.sin(i * 97) * 0.5 + 0.5) * (width - margin * 2);
-            const ry = extTop + (((i * 85 + fieldY * 0.4) % fullH + fullH) % fullH);
-            ctx.beginPath();
-            ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    } else if (stadium.type === 'rain') {
-        // Poças d'água refletivas no gramado molhado
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
-        for (let i = 0; i < 14; i++) {
-            const rx = margin + (Math.sin(i * 77) * 0.5 + 0.5) * (width - margin * 2);
-            const ry = extTop + (((i * 110 + fieldY * 0.6) % fullH + fullH) % fullH);
-            ctx.beginPath();
-            ctx.ellipse(rx, ry, 22, 9, 0, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    }
+    // Textura temática do gramado (várzea, neve, chuva)
+    drawPitchDetails(stadium, pitchLeft, pitchW, extTop, fullH);
 
-    // 4.5. MARCAS DINÂMICAS DE CARRINHO / ESCORREGÕES NO GRAMADO
+    // Marcas dinâmicas de carrinho / escorregões no gramado
     drawTurfSkids(dt);
 
-    // 5. LATERAIS COM BANCO DE RESERVAS E TORCIDA (IGUAL AO TOUCHDOWN HERO)
-    drawSidelines(margin, extTop, fullH, stadium);
+    // Linhas transversais de metragem (a cada 25m) com números stencil (estilo Touchdown Hero)
+    drawMeterChalkLines(stadium, pitchLeft, pitchRight);
 
-    // 6. LINHAS DE MARCAÇÃO DO CAMPO (BRANCAS OU LARANJAS NA NEVE)
+    // Linhas laterais brancas contínuas (touchlines)
     ctx.strokeStyle = stadium.line;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
-    ctx.moveTo(margin, extTop);
-    ctx.lineTo(margin, extBottom);
-    ctx.moveTo(width - margin, extTop);
-    ctx.lineTo(width - margin, extBottom);
+    ctx.moveTo(pitchLeft, extTop);
+    ctx.lineTo(pitchLeft, extBottom);
+    ctx.moveTo(pitchRight, extTop);
+    ctx.lineTo(pitchRight, extBottom);
     ctx.stroke();
 
-    // 7. ESCUDO RETRÔ DE FUTEBOL PINTADO NO GRAMADO A CADA 500m
-    const crestInterval = 500;
-    const currentHalf = Math.floor(stageDist / crestInterval);
-    const nextCrestDist = (currentHalf + 1) * crestInterval;
-    if (nextCrestDist < STAGE_GOAL_METERS) {
-        const crestAhead = nextCrestDist - stageDist;
-        const crestY = player.y - (crestAhead / (scrollSpeed * 0.22)) * scrollSpeed;
-        if (crestY > -120 && crestY < height + 120) {
-            drawCenterPitchCrest(width / 2, crestY, nextCrestDist);
-        }
+    // Faixa de celebração da End Zone aos 1000m
+    const goalLineY = player.y - (STAGE_GOAL_METERS - stageDist) * PIXELS_PER_METER;
+    if (goalLineY > extTop - 100 && goalLineY < extBottom + 100) {
+        drawEndZoneCelebration(goalLineY, stage, stadium, pitchLeft, pitchW);
     }
 
-    // 8. FAIXA DE CELEBRAÇÃO / END ZONE PINTADA NO GRAMADO AOS 1000m
-    if (stageDist >= 880) {
-        const distAhead = STAGE_GOAL_METERS - stageDist;
-        const lineY = (player.y - 70) - (distAhead / 120) * (height * 0.65);
-        if (lineY > -140 && lineY < height + 80) {
-            drawEndZoneCelebration(lineY, stage, stadium);
-        }
-    }
+    // Painéis de LED Digital nas laterais
+    drawLedBoards(pitchLeft, pitchRight, extTop, fullH);
 
-    // 9. EFEITOS CLIMÁTICOS
+    // Arquibancadas e Torcida vibrando
+    drawBleachersAndCrowd(pitchLeft, pitchRight, extTop, fullH, stadium);
+
+    // Efeitos climáticos (chuva, neve, terra, final)
     drawWeather(stadium, dt);
 }
 
-// Laterais detalhadas com banco de reservas e torcedores
-function drawSidelines(margin, topY, totalH, stadium) {
+function drawPitchDetails(stadium, pitchLeft, pitchW, extTop, fullH) {
+    if (stadium.type === 'dirt') {
+        ctx.fillStyle = 'rgba(122, 62, 27, 0.40)';
+        for (let i = 0; i < 20; i++) {
+            const rx = pitchLeft + (Math.sin(i * 123) * 0.5 + 0.5) * pitchW;
+            const ry = extTop + (((i * 95 + fieldY * 0.5) % fullH + fullH) % fullH);
+            ctx.beginPath();
+            ctx.ellipse(rx, ry, 32, 14, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    } else if (stadium.type === 'snow') {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        for (let i = 0; i < 22; i++) {
+            const rx = pitchLeft + (Math.sin(i * 97) * 0.5 + 0.5) * pitchW;
+            const ry = extTop + (((i * 85 + fieldY * 0.4) % fullH + fullH) % fullH);
+            ctx.beginPath();
+            ctx.arc(rx, ry, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    } else if (stadium.type === 'rain') {
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
+        for (let i = 0; i < 16; i++) {
+            const rx = pitchLeft + (Math.sin(i * 77) * 0.5 + 0.5) * pitchW;
+            const ry = extTop + (((i * 110 + fieldY * 0.6) % fullH + fullH) % fullH);
+            ctx.beginPath();
+            ctx.ellipse(rx, ry, 26, 11, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+function drawMeterChalkLines(stadium, pitchLeft, pitchRight) {
     ctx.save();
-    // Pista lateral
-    ctx.fillStyle = stadium.sidelineTrack;
-    ctx.fillRect(-width * 0.5, topY, width * 0.5 + margin, totalH);
-    ctx.fillRect(width - margin, topY, width * 0.5 + margin, totalH);
+    const visibleRangeMeters = (height * 1.6) / PIXELS_PER_METER;
+    const minM = Math.max(0, Math.floor((stageDist - visibleRangeMeters) / 25) * 25);
+    const maxM = Math.min(STAGE_GOAL_METERS - 1, Math.ceil((stageDist + visibleRangeMeters) / 25) * 25);
 
-    // Banco de reservas e técnicos na lateral esquerda
-    const t = performance.now() * 0.003;
-    const benchSpacing = 280;
-    const bOffset = (fieldY * 0.8) % benchSpacing;
+    for (let m = minM; m <= maxM; m += 25) {
+        if (m === 0) continue;
+        const lineY = player.y - (m - stageDist) * PIXELS_PER_METER;
 
-    for (let y = topY + bOffset; y < topY + totalH; y += benchSpacing) {
-        // Banco de reservas azul
-        ctx.fillStyle = '#1e3a8a';
-        ctx.fillRect(4, y, 18, 54);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(4, y, 18, 54);
-
-        // Jogadores reservas sentados (camisas coloridas)
-        ctx.fillStyle = '#ef4444';
-        ctx.fillRect(7, y + 6, 12, 10);
-        ctx.fillStyle = '#facc15';
-        ctx.fillRect(7, y + 22, 12, 10);
-        ctx.fillStyle = '#38bdf8';
-        ctx.fillRect(7, y + 38, 12, 10);
-
-        // Técnico em pé na área técnica gesticulando
-        const coachBob = Math.sin(t + y * 0.01) * 3;
-        ctx.fillStyle = '#0f172a';
+        // 1. Linha transversal de cal branca a cada 25m
+        ctx.strokeStyle = stadium.id === 'snow' ? 'rgba(255, 120, 40, 0.9)' : 'rgba(255, 255, 255, 0.75)';
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.arc(margin - 8, y + 27 + coachBob, 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(margin - 11, y + 32 + coachBob, 6, 10);
+        ctx.moveTo(pitchLeft, lineY);
+        ctx.lineTo(pitchRight, lineY);
+        ctx.stroke();
 
-        // Fotógrafo com colete e câmera na lateral direita
-        ctx.fillStyle = '#f59e0b';
-        ctx.fillRect(width - margin + 6, y + 16, 14, 18);
-        ctx.fillStyle = '#334155';
-        ctx.fillRect(width - margin + 2, y + 22, 6, 6);
+        // 2. Hash marks menores a cada 5m
+        for (let sub = 5; sub < 25; sub += 5) {
+            const subM = m - sub;
+            if (subM > 0) {
+                const subY = player.y - (subM - stageDist) * PIXELS_PER_METER;
+                ctx.strokeStyle = stadium.id === 'snow' ? 'rgba(255, 120, 40, 0.5)' : 'rgba(255, 255, 255, 0.45)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(pitchLeft, subY);
+                ctx.lineTo(pitchLeft + 12, subY);
+                ctx.moveTo(pitchRight - 12, subY);
+                ctx.lineTo(pitchRight, subY);
+                ctx.stroke();
+            }
+        }
+
+        // 3. Números Stencil Atléticos pintados na grama (estilo Touchdown Hero)
+        const numText = `${m}m`;
+        ctx.font = '900 18px var(--head), sans-serif';
+        ctx.fillStyle = stadium.id === 'snow' ? 'rgba(255, 120, 40, 0.85)' : 'rgba(255, 255, 255, 0.70)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Lado Esquerdo
+        ctx.save();
+        ctx.translate(pitchLeft + 36, lineY);
+        ctx.fillText(`▲ ${numText}`, 0, 0);
+        ctx.restore();
+
+        // Lado Direito
+        ctx.save();
+        ctx.translate(pitchRight - 36, lineY);
+        ctx.fillText(`${numText} ▲`, 0, 0);
+        ctx.restore();
     }
     ctx.restore();
 }
 
-// Escudo Clássico de Futebol Pintado no Gramado
-function drawCenterPitchCrest(cx, cy, dist) {
+function drawLedBoards(pitchLeft, pitchRight, extTop, fullH) {
     ctx.save();
-    ctx.translate(cx, cy);
+    const boardW = 16;
+    const t = performance.now() * 0.003;
+    const offset = (fieldY * 0.75) % 360;
 
-    // Círculo Central Suave
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(0, 0, 56, 0, Math.PI * 2);
-    ctx.stroke();
+    // Placa de LED lateral Esquerda
+    const leftX = pitchLeft - boardW - 2;
+    ctx.fillStyle = '#090d16';
+    ctx.fillRect(leftX, extTop, boardW, fullH);
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(leftX, extTop, boardW, fullH);
 
-    // Emblema Central
-    ctx.fillStyle = 'rgba(250, 204, 21, 0.22)';
-    ctx.beginPath();
-    ctx.arc(0, 0, 36, 0, Math.PI * 2);
-    ctx.fill();
+    // Placa de LED lateral Direita
+    const rightX = pitchRight + 2;
+    ctx.fillStyle = '#090d16';
+    ctx.fillRect(rightX, extTop, boardW, fullH);
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(rightX, extTop, boardW, fullH);
 
-    // Estrela e Letreiro da Metragem
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-    ctx.font = 'bold 16px var(--head), sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`★ ${dist}m ★`, 0, 0);
-
+    // Efeito de pixels LED brilhantes piscando nas placas
+    ctx.fillStyle = '#38bdf8';
+    for (let y = extTop + offset; y < extTop + fullH; y += 45) {
+        ctx.fillRect(leftX + 3, y, boardW - 6, 14);
+        ctx.fillStyle = Math.sin(t + y * 0.05) > 0 ? '#38bdf8' : '#ef4444';
+    }
+    for (let y = extTop + ((offset + 60) % 360); y < extTop + fullH; y += 45) {
+        ctx.fillStyle = Math.cos(t + y * 0.05) > 0 ? '#facc15' : '#22c55e';
+        ctx.fillRect(rightX + 3, y, boardW - 6, 14);
+    }
     ctx.restore();
 }
 
-// Faixa de Celebração / Chegada pintada na grama aos 1000m
-function drawEndZoneCelebration(lineY, currentStage, stadium) {
+function drawBleachersAndCrowd(pitchLeft, pitchRight, extTop, fullH, stadium) {
     ctx.save();
-    const margin = 28;
-    const zoneW = width - margin * 2;
+    const t = performance.now() * 0.003;
+    const fanColors = ['#ef4444', '#facc15', '#38bdf8', '#ffffff', '#22c55e', '#0f172a'];
 
-    // Faixa colorida no gramado
-    ctx.fillStyle = stadium.id === 'final' ? 'rgba(250, 204, 21, 0.85)' : 'rgba(22, 163, 74, 0.85)';
-    ctx.fillRect(margin, lineY - 32, zoneW, 54);
+    // 1. Arquibancada Esquerda
+    const bLeftW = pitchLeft - 22;
+    if (bLeftW > 0) {
+        ctx.fillStyle = stadium.sidelineTrack || '#1e293b';
+        ctx.fillRect(-width * 0.8, extTop, width * 0.8 + bLeftW, fullH);
+
+        const tierSpacing = 38;
+        const bOffset = (fieldY * 0.5) % tierSpacing;
+        for (let y = extTop + bOffset; y < extTop + fullH; y += tierSpacing) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+            ctx.fillRect(0, y, bLeftW, 3);
+
+            for (let fx = 8; fx < bLeftW - 8; fx += 16) {
+                const fanSeed = (fx * 37 + y * 19);
+                const bob = Math.sin(t * 8 + fanSeed) * 2.5;
+                const col = fanColors[Math.abs(fanSeed) % fanColors.length];
+
+                ctx.fillStyle = col;
+                ctx.fillRect(fx - 4, y - 8 + bob, 8, 9);
+                ctx.fillStyle = '#fcd34d';
+                ctx.beginPath();
+                ctx.arc(fx, y - 11 + bob, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (fanSeed % 5 === 0) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(fx + 3, y - 16 + bob, 7, 5);
+                    ctx.strokeStyle = '#64748b';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(fx + 3, y - 16 + bob, 7, 5);
+                }
+            }
+        }
+    }
+
+    // 2. Arquibancada Direita
+    const bRightStart = pitchRight + 22;
+    const bRightW = (fieldWidth + width * 0.8) - bRightStart;
+    if (bRightW > 0) {
+        ctx.fillStyle = stadium.sidelineTrack || '#1e293b';
+        ctx.fillRect(bRightStart, extTop, bRightW, fullH);
+
+        const tierSpacing = 38;
+        const bOffset = (fieldY * 0.5) % tierSpacing;
+        for (let y = extTop + bOffset; y < extTop + fullH; y += tierSpacing) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+            ctx.fillRect(bRightStart, y, bRightW, 3);
+
+            for (let fx = bRightStart + 12; fx < bRightStart + bRightW - 8; fx += 16) {
+                const fanSeed = (fx * 29 + y * 23);
+                const bob = Math.cos(t * 8 + fanSeed) * 2.5;
+                const col = fanColors[Math.abs(fanSeed) % fanColors.length];
+
+                ctx.fillStyle = col;
+                ctx.fillRect(fx - 4, y - 8 + bob, 8, 9);
+                ctx.fillStyle = '#fcd34d';
+                ctx.beginPath();
+                ctx.arc(fx, y - 11 + bob, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                if ((fanSeed + Math.floor(t * 4)) % 37 === 0) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.beginPath();
+                    ctx.arc(fx, y - 10, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+    }
+    ctx.restore();
+}
+
+function drawEndZoneCelebration(lineY, currentStage, stadium, pitchLeft, pitchW) {
+    ctx.save();
+    ctx.fillStyle = stadium.id === 'final' ? 'rgba(250, 204, 21, 0.90)' : 'rgba(22, 163, 74, 0.90)';
+    ctx.fillRect(pitchLeft, lineY - 32, pitchW, 64);
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(margin, lineY - 32, zoneW, 54);
+    ctx.lineWidth = 3.5;
+    ctx.strokeRect(pitchLeft, lineY - 32, pitchW, 64);
 
-    // Padrão xadrez esportivo nas bordas da faixa
-    const sqSize = 14;
-    const cols = Math.floor(zoneW / sqSize);
+    const sqSize = 16;
+    const cols = Math.floor(pitchW / sqSize);
     for (let c = 0; c < cols; c++) {
-        ctx.fillStyle = c % 2 === 0 ? 'rgba(255, 255, 255, 0.9)' : 'rgba(15, 23, 42, 0.8)';
-        ctx.fillRect(margin + c * sqSize, lineY + 14, sqSize, 8);
+        ctx.fillStyle = c % 2 === 0 ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.85)';
+        ctx.fillRect(pitchLeft + c * sqSize, lineY + 18, sqSize, 12);
+        ctx.fillRect(pitchLeft + c * sqSize, lineY - 30, sqSize, 12);
     }
 
-    // Texto da Fase pintado na grama
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 20px var(--head), sans-serif';
+    ctx.font = '900 22px var(--head), sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = 6;
-    ctx.fillText(`⚽ GOL! FASE ${currentStage + 1} ⚽`, width / 2, lineY - 8);
-
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+    ctx.shadowBlur = 8;
+    ctx.fillText(`⚽ GOL! FASE ${currentStage} ⚽`, pitchLeft + pitchW / 2, lineY);
     ctx.restore();
 }
 
@@ -2098,9 +2245,13 @@ function drawMagnetSprite(c, x, y, bob) {
 function spawnPickups(dist) {
     if (gameState !== STATE.RUNNING) return;
 
-    const laneW = (width - pitchMargin * 2) / 3;
-    const lane = Math.floor(Math.random() * 3);
-    const posX = pitchMargin + (lane + 0.5) * laneW;
+    const pitchLeft = fieldMargin;
+    const pitchRight = fieldWidth - fieldMargin;
+    const pitchW = pitchRight - pitchLeft;
+    const numLanes = 5;
+    const laneW = pitchW / numLanes;
+    const lane = Math.floor(Math.random() * numLanes);
+    const posX = pitchLeft + (lane + 0.5) * laneW;
 
     const rand = Math.random();
 
@@ -2219,45 +2370,79 @@ function spawnDefendersIfNeeded() {
 
     if (stageDist >= nextSpawnDist) {
         const rivalTeam = profile.teamId === 'flamengo' ? TEAMS.find(t => t.id === 'corinthians') : TEAMS.find(t => t.id === 'flamengo');
-        const laneW = (width - pitchMargin * 2) / 3;
+        const pitchLeft = fieldMargin;
+        const pitchRight = fieldWidth - fieldMargin;
+        const pitchW = pitchRight - pitchLeft;
+        const numLanes = 5;
+        const laneW = pitchW / numLanes;
 
-        // Ondas táticas calibradas por fase
+        // Ondas táticas calibradas por fase (estilo Touchdown Hero)
         const waveType = Math.random();
 
-        if (waveType < 0.45 || defenders.length === 0) {
-            // TIPO 1: BLITZ HUNTER (Caçador implacável que rastreia a posição X do jogador)
-            const lane = Math.floor(Math.random() * 3);
-            const posX = pitchMargin + (lane + 0.5) * laneW;
+        if (stage >= 3 && waveType < 0.22) {
+            // TIPO 5: BARREIRA ESCALONADA (3 Zagueiros em linha com brechas)
+            const openLane = Math.floor(Math.random() * numLanes);
+            for (let l = 0; l < numLanes; l++) {
+                if (l === openLane) continue;
+                if (Math.random() < 0.70) {
+                    const posX = pitchLeft + (l + 0.5) * laneW;
+                    defenders.push({
+                        x: posX,
+                        y: -75 - (Math.random() * 25),
+                        originX: posX,
+                        radius: 20,
+                        type: 'WEAVER',
+                        state: 'NORMAL',
+                        stateTimer: 0,
+                        baseVy: scrollSpeed * 0.38 + (stage * 9),
+                        weaveFreq: 2.2 + Math.random() * 1.2,
+                        weaveAmp: 16 + Math.random() * 14,
+                        weaveTimer: Math.random() * Math.PI * 2,
+                        runCycle: 0,
+                        team: rivalTeam,
+                        number: [2, 3, 4, 6][l % 4],
+                        dodged: false
+                    });
+                }
+            }
+        } else if (waveType < 0.46 || defenders.length === 0) {
+            // TIPO 1: BLITZ HUNTER (Caçador implacável que persegue o jogador horizontalmente)
+            const lane = Math.floor(Math.random() * numLanes);
+            const posX = pitchLeft + (lane + 0.5) * laneW;
             defenders.push({
                 x: posX,
                 y: -75,
+                originX: posX,
                 radius: 20,
                 type: 'HUNTER',
                 state: 'NORMAL',
                 stateTimer: 0,
-                baseVy: scrollSpeed * 0.45 + (stage * 12),
-                trackingSpd: 85 + Math.min(stage, 6) * 16,
+                baseVy: scrollSpeed * 0.44 + (stage * 12),
+                trackingSpd: 90 + Math.min(stage, 6) * 18,
                 tackleVx: 0,
                 tackleVy: 0,
+                weaveFreq: 2.5,
+                weaveAmp: 12,
+                weaveTimer: Math.random() * Math.PI,
                 runCycle: 0,
                 team: rivalTeam,
                 number: [3, 4, 5, 2][Math.floor(Math.random() * 4)],
                 dodged: false
             });
-        } else if (waveType < 0.78) {
-            // TIPO 2: PINÇA DAS PONTAS (Dois zagueiros fechando as pontas em direção ao centro)
-            // A trilha de moedas no meio guia o caminho seguro!
-            const d1X = pitchMargin + 25;
-            const d2X = width - pitchMargin - 25;
+        } else if (waveType < 0.72) {
+            // TIPO 2: PINÇA DAS PONTAS (Dois zagueiros fechando em direção ao meio)
+            const d1X = pitchLeft + laneW * 0.5;
+            const d2X = pitchRight - laneW * 0.5;
             defenders.push({
                 x: d1X,
                 y: -75,
+                originX: d1X,
                 radius: 20,
                 type: 'PINCER',
                 state: 'NORMAL',
                 stateTimer: 0,
                 baseVy: scrollSpeed * 0.40 + (stage * 10),
-                pincerDir: 1, // fecha para a direita
+                pincerDir: 1, // fecha para o centro
                 runCycle: 0,
                 team: rivalTeam,
                 number: 6,
@@ -2266,27 +2451,29 @@ function spawnDefendersIfNeeded() {
             defenders.push({
                 x: d2X,
                 y: -95,
+                originX: d2X,
                 radius: 20,
                 type: 'PINCER',
                 state: 'NORMAL',
                 stateTimer: 0,
                 baseVy: scrollSpeed * 0.40 + (stage * 10),
-                pincerDir: -1, // fecha para a esquerda
+                pincerDir: -1, // fecha para o centro
                 runCycle: 0,
                 team: rivalTeam,
                 number: 2,
                 dodged: false
             });
-        } else if (stage >= 2 && waveType > 0.82) {
-            // TIPO 4: XERIFÃO DA ZAGA (Zagueiro xerife central com braçadeira de capitão e bote feroz)
+        } else if (stage >= 2 && waveType > 0.84) {
+            // TIPO 4: XERIFÃO DA ZAGA (Zagueiro capitão que patrulha amplamente o gramado)
             defenders.push({
-                x: width / 2,
+                x: fieldWidth / 2,
                 y: -85,
+                originX: fieldWidth / 2,
                 radius: 22,
                 type: 'SWEEPER',
                 state: 'NORMAL',
                 stateTimer: 0,
-                baseVy: scrollSpeed * 0.32 + (stage * 9),
+                baseVy: scrollSpeed * 0.34 + (stage * 9),
                 patrolDir: Math.random() < 0.5 ? 1 : -1,
                 runCycle: 0,
                 team: rivalTeam,
@@ -2295,17 +2482,21 @@ function spawnDefendersIfNeeded() {
                 dodged: false
             });
         } else {
-            // TIPO 3: CARRINHO DESLIZANTE (SLIDER)
-            const lane = Math.floor(Math.random() * 3);
-            const posX = pitchMargin + (lane + 0.5) * laneW;
+            // TIPO 3: CARRINHO DESLIZANTE / DRIBLADOR
+            const lane = Math.floor(Math.random() * numLanes);
+            const posX = pitchLeft + (lane + 0.5) * laneW;
             defenders.push({
                 x: posX,
                 y: -75,
+                originX: posX,
                 radius: 20,
                 type: 'SLIDER',
                 state: 'NORMAL',
                 stateTimer: 0,
-                baseVy: scrollSpeed * 0.35 + (stage * 10),
+                baseVy: scrollSpeed * 0.36 + (stage * 10),
+                weaveFreq: 2.4,
+                weaveAmp: 22,
+                weaveTimer: Math.random() * Math.PI,
                 tackleVx: 0,
                 runCycle: 0,
                 team: rivalTeam,
@@ -2314,8 +2505,8 @@ function spawnDefendersIfNeeded() {
             });
         }
 
-        // Espaçamento calculado
-        const spacing = Math.max(85, 130 - Math.min(stage, 5) * 8);
+        // Espaçamento calculado por fase (fica mais tenso a cada fase!)
+        const spacing = Math.max(75, 125 - Math.min(stage, 6) * 8);
         nextSpawnDist = stageDist + spacing;
         spawnPickups(stageDist);
     }
@@ -2323,6 +2514,8 @@ function spawnDefendersIfNeeded() {
 
 function updateDefenders(dt) {
     const stadium = getCurrentStadium();
+    const pitchLeft = fieldMargin;
+    const pitchRight = fieldWidth - fieldMargin;
 
     for (let i = defenders.length - 1; i >= 0; i--) {
         const d = defenders[i];
@@ -2331,17 +2524,16 @@ function updateDefenders(dt) {
 
         if (d.type === 'HUNTER') {
             if (d.state === 'NORMAL') {
-                // Desce no campo acompanhando o ritmo do Touchdown Hero
                 d.y += (scrollSpeed + d.baseVy) * timeScale * dt;
 
-                // Rastreia o jogador horizontalmente (Caçador ativo!)
+                // Rastreia o jogador lateralmente de forma orgânica
                 const dx = player.x - d.x;
                 d.x += Math.sign(dx) * Math.min(Math.abs(dx), d.trackingSpd * timeScale * dt);
 
-                // Quando chega na distância de ataque (~220px), prepara o bote!
+                // Bote quando entra no alcance
                 if (distToPlayer < 225 && d.y < player.y - 15) {
                     d.state = 'ALERT';
-                    d.stateTimer = 0.30; // 300ms de reação rápida
+                    d.stateTimer = Math.max(0.18, 0.34 - Math.min(stage, 5) * 0.035);
                     audio.playAlert();
                 }
             } else if (d.state === 'ALERT') {
@@ -2350,10 +2542,10 @@ function updateDefenders(dt) {
                 if (d.stateTimer <= 0) {
                     d.state = 'TACKLING';
                     const angle = Math.atan2(player.y - d.y, player.x - d.x);
-                    const spd = 270 + Math.min(stage, 6) * 20;
+                    const spd = 275 + Math.min(stage, 6) * 22;
                     d.tackleVx = Math.cos(angle) * spd;
                     d.tackleVy = Math.sin(angle) * spd + scrollSpeed * 0.3;
-                    d.stateTimer = 0.70;
+                    d.stateTimer = 0.65;
                     addDustPuff(d.x, d.y + 12, 3);
                 }
             } else if (d.state === 'TACKLING') {
@@ -2362,23 +2554,21 @@ function updateDefenders(dt) {
                 addDustPuff(d.x, d.y + 12, 1);
                 d.stateTimer -= dt * timeScale;
                 if (d.stateTimer <= 0) {
-                    d.state = 'STUMBLED';
-                    d.stateTimer = 1.2;
-                    addDustPuff(d.x, d.y, 4);
+                    // ZAGUEIRO RECUPERA A CORRIDA (NÃO VIRA FANTASMA! HITBOX FICA ATIVA!)
+                    d.state = 'NORMAL';
+                    d.tackleVx = 0;
+                    d.tackleVy = 0;
+                    addDustPuff(d.x, d.y + 12, 2);
                 }
-            } else if (d.state === 'STUMBLED') {
-                d.y += scrollSpeed * 0.7 * timeScale * dt;
-                d.stateTimer -= dt * timeScale;
             }
         } else if (d.type === 'PINCER') {
             if (d.state === 'NORMAL') {
                 d.y += (scrollSpeed + d.baseVy) * timeScale * dt;
-                // Fecha o meio progressivamente
-                d.x += d.pincerDir * (90 + stage * 12) * timeScale * dt;
+                d.x += d.pincerDir * (95 + stage * 14) * timeScale * dt;
 
-                if (distToPlayer < 200 && d.y < player.y) {
+                if (distToPlayer < 205 && d.y < player.y) {
                     d.state = 'ALERT';
-                    d.stateTimer = 0.28;
+                    d.stateTimer = Math.max(0.18, 0.32 - Math.min(stage, 5) * 0.03);
                     audio.playAlert();
                 }
             } else if (d.state === 'ALERT') {
@@ -2386,9 +2576,9 @@ function updateDefenders(dt) {
                 d.stateTimer -= dt * timeScale;
                 if (d.stateTimer <= 0) {
                     d.state = 'TACKLING';
-                    d.tackleVx = d.pincerDir * (240 + stage * 15);
+                    d.tackleVx = d.pincerDir * (250 + stage * 18);
                     d.tackleVy = 180;
-                    d.stateTimer = 0.65;
+                    d.stateTimer = 0.60;
                 }
             } else if (d.state === 'TACKLING') {
                 d.x += d.tackleVx * timeScale * dt;
@@ -2396,18 +2586,20 @@ function updateDefenders(dt) {
                 addDustPuff(d.x, d.y + 12, 2);
                 d.stateTimer -= dt * timeScale;
                 if (d.stateTimer <= 0) {
-                    d.state = 'STUMBLED';
-                    d.stateTimer = 1.0;
+                    d.state = 'NORMAL';
+                    d.tackleVx = 0;
+                    d.tackleVy = 0;
                 }
-            } else if (d.state === 'STUMBLED') {
-                d.y += scrollSpeed * 0.7 * timeScale * dt;
             }
         } else if (d.type === 'SLIDER') {
             if (d.state === 'NORMAL') {
                 d.y += (scrollSpeed + d.baseVy) * timeScale * dt;
-                if (distToPlayer < 210 && Math.abs(player.y - d.y) < 170) {
+                d.weaveTimer += dt * d.weaveFreq * timeScale;
+                d.x = d.originX + Math.sin(d.weaveTimer) * d.weaveAmp;
+
+                if (distToPlayer < 215 && Math.abs(player.y - d.y) < 170) {
                     d.state = 'ALERT';
-                    d.stateTimer = 0.28;
+                    d.stateTimer = Math.max(0.18, 0.30 - Math.min(stage, 5) * 0.03);
                     audio.playAlert();
                 }
             } else if (d.state === 'ALERT') {
@@ -2416,8 +2608,8 @@ function updateDefenders(dt) {
                 if (d.stateTimer <= 0) {
                     d.state = 'TACKLING';
                     const dirX = player.x > d.x ? 1 : -1;
-                    d.tackleVx = dirX * (280 + Math.min(stage, 6) * 18);
-                    d.stateTimer = 0.65;
+                    d.tackleVx = dirX * (290 + Math.min(stage, 6) * 20);
+                    d.stateTimer = 0.60;
                 }
             } else if (d.state === 'TACKLING') {
                 d.x += d.tackleVx * timeScale * dt;
@@ -2429,26 +2621,30 @@ function updateDefenders(dt) {
                 else addDustPuff(d.x, d.y + 12, 3);
                 d.stateTimer -= dt * timeScale;
                 if (d.stateTimer <= 0) {
-                    d.state = 'STUMBLED';
-                    d.stateTimer = 1.0;
+                    d.state = 'NORMAL';
+                    d.tackleVx = 0;
                 }
-            } else if (d.state === 'STUMBLED') {
-                d.y += scrollSpeed * 0.7 * timeScale * dt;
+            }
+        } else if (d.type === 'WEAVER') {
+            if (d.state === 'NORMAL') {
+                d.y += (scrollSpeed + d.baseVy) * timeScale * dt;
+                d.weaveTimer += dt * d.weaveFreq * timeScale;
+                d.x = d.originX + Math.sin(d.weaveTimer) * d.weaveAmp;
             }
         } else if (d.type === 'SWEEPER') {
             if (d.state === 'NORMAL') {
                 d.y += (scrollSpeed + d.baseVy) * timeScale * dt;
-                d.x += d.patrolDir * (115 + stage * 10) * timeScale * dt;
-                if (d.x < pitchMargin + 28) {
-                    d.x = pitchMargin + 28;
+                d.x += d.patrolDir * (120 + stage * 12) * timeScale * dt;
+                if (d.x < pitchLeft + 28) {
+                    d.x = pitchLeft + 28;
                     d.patrolDir = 1;
-                } else if (d.x > width - pitchMargin - 28) {
-                    d.x = width - pitchMargin - 28;
+                } else if (d.x > pitchRight - 28) {
+                    d.x = pitchRight - 28;
                     d.patrolDir = -1;
                 }
                 if (distToPlayer < 240 && d.y < player.y - 10) {
                     d.state = 'ALERT';
-                    d.stateTimer = 0.30;
+                    d.stateTimer = Math.max(0.18, 0.32 - Math.min(stage, 5) * 0.03);
                     audio.playAlert();
                 }
             } else if (d.state === 'ALERT') {
@@ -2457,10 +2653,10 @@ function updateDefenders(dt) {
                 if (d.stateTimer <= 0) {
                     d.state = 'TACKLING';
                     const angle = Math.atan2(player.y - d.y, player.x - d.x);
-                    const spd = 310 + Math.min(stage, 6) * 22;
+                    const spd = 315 + Math.min(stage, 6) * 24;
                     d.tackleVx = Math.cos(angle) * spd;
                     d.tackleVy = Math.sin(angle) * spd + scrollSpeed * 0.3;
-                    d.stateTimer = 0.75;
+                    d.stateTimer = 0.70;
                     addDustPuff(d.x, d.y + 12, 4);
                 }
             } else if (d.state === 'TACKLING') {
@@ -2472,18 +2668,21 @@ function updateDefenders(dt) {
                 addDustPuff(d.x, d.y + 12, 2);
                 d.stateTimer -= dt * timeScale;
                 if (d.stateTimer <= 0) {
-                    d.state = 'STUMBLED';
-                    d.stateTimer = 1.3;
-                    addDustPuff(d.x, d.y, 5);
+                    d.state = 'NORMAL';
+                    d.tackleVx = 0;
+                    d.tackleVy = 0;
                 }
-            } else if (d.state === 'STUMBLED') {
-                d.y += scrollSpeed * 0.7 * timeScale * dt;
-                d.stateTimer -= dt * timeScale;
             }
         }
 
-        // Drible no Limite! (Dodge do Touchdown Hero + Combo Multiplicador)
-        if (!d.dodged && (d.y > player.y + 26 || d.state === 'STUMBLED')) {
+        // Se o zagueiro foi nocauteado pelo giro do craque
+        if (d.state === 'KNOCKED_OUT') {
+            d.y += scrollSpeed * 0.7 * timeScale * dt;
+            d.stateTimer -= dt * timeScale;
+        }
+
+        // Drible no Limite! (Dodge do Touchdown Hero + Olé da Torcida + Combo)
+        if (!d.dodged && (d.y > player.y + 26 || d.state === 'KNOCKED_OUT')) {
             d.dodged = true;
             dribbles++;
             comboCount++;
@@ -2496,17 +2695,29 @@ function updateDefenders(dt) {
             if (scoreEl) scoreEl.textContent = score;
 
             audio.playCombo(comboCount);
+            audio.playOle();
             triggerHaptic('dodge');
 
-            // Texto flutuante de pontuação
+            const COOL_POPUPS = [
+                'DRIBLOU! 🔥',
+                'CANETA! 🪄',
+                'CHAPÉU! 🎩',
+                'FALOU VALEU! 💨',
+                'HUMILHOU! ⭐',
+                'SHOW DO CRAQUE! ⚡',
+                'DEIXOU NA SAUDADE! ⚽'
+            ];
+            const popupTxt = COOL_POPUPS[Math.floor(Math.random() * COOL_POPUPS.length)];
+
+            // Texto flutuante estilo quadrinhos
             particles.push({
                 type: 'text',
-                text: comboCount > 1 ? `x${comboCount} +${pts}` : `+${pts}`,
+                text: comboCount > 1 ? `${popupTxt} x${comboCount} +${pts}` : `${popupTxt} +${pts}`,
                 x: d.x,
-                y: d.y - 25,
-                vy: -60,
-                life: 0.9,
-                color: comboCount >= 3 ? '#facc15' : '#ffffff'
+                y: d.y - 28,
+                vy: -65,
+                life: 1.1,
+                color: comboCount >= 3 ? '#facc15' : '#38bdf8'
             });
 
             if (comboPillEl) {
@@ -2523,26 +2734,25 @@ function updateDefenders(dt) {
             } else if (comboCount === 2) {
                 showToast('🔥 COMBO x2!', `+${pts} PONTOS!`);
             } else {
-                showToast('⚽ DRIBLE NO LIMITE!', '+150 PTS');
+                showToast('⚽ DRIBLE NO LIMITE!', `+${pts} PTS`);
             }
 
             updateMissionProgress();
         }
 
-        // Colisão com o Jogador
-        if (gameState === STATE.RUNNING && d.state !== 'STUMBLED') {
+        // Colisão com o Jogador (ZAGUEIROS ATIVOS NUNCA FICAM FANTASMAS!)
+        if (gameState === STATE.RUNNING) {
             if (distToPlayer < player.radius + d.radius - 4) {
                 if (superSpeedTimer > 0) {
-                    d.state = 'STUMBLED';
-                    d.stateTimer = 1.3;
-                    d.vx = -d.vx;
+                    d.state = 'KNOCKED_OUT';
+                    d.stateTimer = 1.4;
                     addDustPuff(d.x, d.y, 6);
                     audio.playWhoosh();
                     showToast('💥 ATROPELOU!', '+200 PTS');
                     score += 200;
                     triggerHaptic('dodge');
                 } else if (isSpinning || invulnerableTimer > 0) {
-                    d.state = 'STUMBLED';
+                    d.state = 'KNOCKED_OUT';
                     d.stateTimer = 1.4;
                     addDustPuff(d.x, d.y, 6);
                     audio.playWhoosh();
@@ -2550,9 +2760,12 @@ function updateDefenders(dt) {
                     score += 250;
                     triggerHaptic('spin');
                 } else {
-                    triggerHaptic('crash');
-                    triggerGameOver('O ZAGUEIRO DESARMOU VOCÊ!');
-                    return;
+                    // Qualquer contato com zagueiro que não foi nocauteado = FIM DE JOGO!
+                    if (d.state !== 'KNOCKED_OUT') {
+                        triggerHaptic('crash');
+                        triggerGameOver('O ZAGUEIRO DESARMOU VOCÊ!');
+                        return;
+                    }
                 }
             }
         }
@@ -2605,7 +2818,7 @@ function updateDefenders(dt) {
             ctx.restore();
         }
 
-        if (d.state === 'STUMBLED') {
+        if (d.state === 'KNOCKED_OUT') {
             ctx.font = '16px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('💫', d.x, d.y - 40);
@@ -2624,8 +2837,8 @@ function updatePlayer(dt) {
         player.x += (player.targetX - player.x) * Math.min(1, lerpFactor);
         player.y += (player.targetY - player.y) * Math.min(1, lerpFactor);
 
-        const minX = pitchMargin + player.radius + 6;
-        const maxX = width - pitchMargin - player.radius - 6;
+        const minX = fieldMargin + player.radius + 6;
+        const maxX = fieldWidth - fieldMargin - player.radius - 6;
         player.x = Math.max(minX, Math.min(maxX, player.x));
 
         const minY = height * 0.16;
@@ -2649,8 +2862,11 @@ function updatePlayer(dt) {
             }
         }
 
-        // Rastro dourado e rastro de fogo em combos altos
-        if (superSpeedTimer > 0 || comboCount >= 3) {
+        // Rastro de fogo na bola em combos e rastro dourado com chuteira turbo
+        if (comboCount >= 3) {
+            addFireParticle(player.x, player.y + 22, 2);
+        }
+        if (superSpeedTimer > 0) {
             addGoldTrail(player.x, player.y);
         }
 
@@ -3248,7 +3464,8 @@ function updateSlowMoState(dt) {
             // Aguardando primeiro toque para iniciar a corrida (Kickoff)
             isSlowMo = false;
             timeScale = 1.0;
-            camera.targetZoom = 1.0;
+            camera.targetZoom = 1.35;
+            camera.targetX = player.x;
             camera.targetOffsetY = 0;
             slowEnergy = 100;
             if (appEl) appEl.classList.remove('slowmo');
@@ -3257,12 +3474,13 @@ function updateSlowMoState(dt) {
         }
 
         if (!isHolding) {
-            // SOLTOU O DEDO: Câmera Lenta ativada e o campo abre (zoom-out)!
+            // SOLTOU O DEDO: Câmera Lenta ativada e o campo abre (zoom-out total)!
             if (slowEnergy > 4) {
                 isSlowMo = true;
-                timeScale = 0.28; // Bullet-time suave
-                camera.targetZoom = 0.70; // O campo abre! Visão ampla!
-                camera.targetOffsetY = height * 0.16; // Mostra muito mais à frente
+                timeScale = 0.28; // Bullet-time tenso
+                camera.targetZoom = (width / fieldWidth) * 0.94; // O campo abre completamente!
+                camera.targetX = fieldWidth / 2; // Centraliza a visão do estádio
+                camera.targetOffsetY = 85; // Visão tática à frente
                 slowEnergy -= getSlowDrainRate() * dt;
                 if (appEl) appEl.classList.add('slowmo');
 
@@ -3270,23 +3488,26 @@ function updateSlowMoState(dt) {
                     slowEnergy = 0;
                     isSlowMo = false;
                     timeScale = 1.0;
-                    camera.targetZoom = 1.0;
+                    camera.targetZoom = 1.35;
+                    camera.targetX = player.x;
                     camera.targetOffsetY = 0;
                     if (appEl) appEl.classList.remove('slowmo');
                 }
             } else {
                 isSlowMo = false;
                 timeScale = 1.0;
-                camera.targetZoom = 1.0;
+                camera.targetZoom = 1.35;
+                camera.targetX = player.x;
                 camera.targetOffsetY = 0;
                 if (appEl) appEl.classList.remove('slowmo');
             }
         } else {
-            // SEGURANDO O DEDO: Corre normal, câmera foca no jogador e recarrega energia
+            // SEGURANDO O DEDO: Corre normal, câmera foca no jogador com zoom e acompanha movimento lateral
             isSlowMo = false;
             timeScale = 1.0;
-            camera.targetZoom = 1.0;
+            camera.targetZoom = 1.35;
             camera.targetOffsetY = 0;
+            camera.targetX = player.x;
             if (appEl) appEl.classList.remove('slowmo');
 
             if (slowEnergy < 100) {
@@ -3297,9 +3518,15 @@ function updateSlowMoState(dt) {
         isSlowMo = false;
         timeScale = 1.0;
         camera.targetZoom = 1.0;
+        camera.targetX = width / 2;
         camera.targetOffsetY = 0;
         if (appEl) appEl.classList.remove('slowmo');
     }
+
+    // Interpolação suave e ágil da câmera
+    camera.x += (camera.targetX - camera.x) * Math.min(1, 12 * dt);
+    camera.zoom += (camera.targetZoom - camera.zoom) * Math.min(1, 10 * dt);
+    camera.offsetY += (camera.targetOffsetY - camera.offsetY) * Math.min(1, 10 * dt);
 
     // Efeitos Sonoros Dinâmicos e Tensão Cardíaca em Bullet-Time
     if (isSlowMo && !wasSlowMo) {
@@ -3310,16 +3537,12 @@ function updateSlowMoState(dt) {
         heartbeatTimer -= dt;
         if (heartbeatTimer <= 0) {
             audio.playHeartbeat();
-            heartbeatTimer = 0.65;
+            heartbeatTimer = 0.55;
         }
     } else if (!isSlowMo && wasSlowMo) {
         audio.playSlowMoEnd();
     }
     wasSlowMo = isSlowMo;
-
-    // Interpolação suave da câmera
-    camera.zoom += (camera.targetZoom - camera.zoom) * Math.min(1, 8 * dt);
-    camera.offsetY += (camera.targetOffsetY - camera.offsetY) * Math.min(1, 8 * dt);
 
     if (slowFillEl) slowFillEl.style.width = `${Math.max(0, Math.min(100, slowEnergy))}%`;
 }
@@ -3430,16 +3653,14 @@ function gameLoop(timestamp) {
         ctx.translate(sx, sy);
     }
 
-    // Câmera dinâmica centralizada no jogador (zoom-out do Slow-Mo)
-    if (camera.zoom !== 1.0 || camera.offsetY !== 0) {
-        const pivotX = player.x;
-        const pivotY = player.y;
-        ctx.translate(pivotX, pivotY + camera.offsetY);
+    if (gameState === STATE.RUNNING) {
+        // Câmera 2D estilo Touchdown Hero: foca no jogador com zoom e panning horizontal
+        ctx.translate(width / 2, player.y);
         ctx.scale(camera.zoom, camera.zoom);
-        ctx.translate(-pivotX, -pivotY);
+        ctx.translate(-camera.x, -(player.y + camera.offsetY));
     }
 
-    ctx.clearRect(-width * 0.5, -height * 0.5, width * 2, height * 2);
+    ctx.clearRect(-width * 0.8, -height * 1.5, fieldWidth + width * 1.6, height * 3);
 
     drawPitch(dt);
 
@@ -3504,10 +3725,17 @@ function startGame() {
     if (comboPillEl) comboPillEl.classList.add('hidden');
     updateMissionProgress();
 
-    player.x = width / 2;
+    player.x = fieldWidth / 2;
     player.y = height - 130;
     player.targetX = player.x;
     player.targetY = player.y;
+
+    camera.x = fieldWidth / 2;
+    camera.targetX = fieldWidth / 2;
+    camera.zoom = 1.35;
+    camera.targetZoom = 1.35;
+    camera.offsetY = 0;
+    camera.targetOffsetY = 0;
 
     audio.playWhistle();
 }
@@ -3599,10 +3827,11 @@ canvas.addEventListener('touchmove', (e) => {
         for (let i = 0; i < e.touches.length; i++) {
             const t = e.touches[i];
             if (t.identifier === activeTouchId) {
-                const dx = t.clientX - touchOriginX;
-                const dy = t.clientY - touchOriginY;
-                player.targetX = playerOriginX + dx;
-                player.targetY = playerOriginY + dy;
+                const z = camera.zoom || 1.0;
+                const dx = (t.clientX - touchOriginX) / z;
+                const dy = (t.clientY - touchOriginY) / z;
+                player.targetX = playerOriginX + dx * 1.15;
+                player.targetY = playerOriginY + dy * 1.15;
                 break;
             }
         }
@@ -3675,10 +3904,11 @@ canvas.addEventListener('mousedown', (e) => {
 
 window.addEventListener('mousemove', (e) => {
     if (gameState === STATE.RUNNING && isMouseDown) {
-        const dx = e.clientX - touchOriginX;
-        const dy = e.clientY - touchOriginY;
-        player.targetX = playerOriginX + dx;
-        player.targetY = playerOriginY + dy;
+        const z = camera.zoom || 1.0;
+        const dx = (e.clientX - touchOriginX) / z;
+        const dy = (e.clientY - touchOriginY) / z;
+        player.targetX = playerOriginX + dx * 1.15;
+        player.targetY = playerOriginY + dy * 1.15;
     } else if (gameState === STATE.PENALTY_AIM && isPenFlicking) {
         const rect = canvas.getBoundingClientRect();
         const px = e.clientX - rect.left;
