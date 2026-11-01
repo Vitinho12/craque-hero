@@ -263,6 +263,70 @@ class AudioManager {
             });
         } catch (e) {}
     }
+
+    playSlowMoStart() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(65, this.ctx.currentTime + 0.32);
+            gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.32);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.34);
+        } catch (e) {}
+    }
+
+    playHeartbeat() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+            const t = this.ctx.currentTime;
+            const osc1 = this.ctx.createOscillator();
+            const gain1 = this.ctx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(75, t);
+            osc1.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+            gain1.gain.setValueAtTime(0.26, t);
+            gain1.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+            osc1.connect(gain1);
+            gain1.connect(this.ctx.destination);
+            osc1.start(t);
+            osc1.stop(t + 0.13);
+
+            const osc2 = this.ctx.createOscillator();
+            const gain2 = this.ctx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(88, t + 0.13);
+            osc2.frequency.exponentialRampToValueAtTime(42, t + 0.25);
+            gain2.gain.setValueAtTime(0.18, t + 0.13);
+            gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+            osc2.connect(gain2);
+            gain2.connect(this.ctx.destination);
+            osc2.start(t + 0.13);
+            osc2.stop(t + 0.26);
+        } catch (e) {}
+    }
+
+    playSlowMoEnd() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(480, this.ctx.currentTime + 0.18);
+            gain.gain.setValueAtTime(0.24, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.18);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.19);
+        } catch (e) {}
+    }
 }
 
 const audio = new AudioManager();
@@ -280,6 +344,7 @@ const hudEl = document.getElementById('hud');
 
 const comboPillEl = document.getElementById('combo-pill');
 const comboCountEl = document.getElementById('combo-count');
+const kickoffHintEl = document.getElementById('kickoff-hint');
 const missionBarEl = document.getElementById('mission-bar');
 const missionTxtEl = document.getElementById('mission-txt');
 const missionRewardEl = document.getElementById('mission-reward');
@@ -368,6 +433,7 @@ const profile = {
     highScore: 0,
     totalCoins: 0,
     missionIdx: 0,
+    sound: true,
     upgrades: {
         slow: 1,    // max 5
         spin: 1,    // max 5
@@ -386,6 +452,10 @@ const profile = {
             if (data.highScore) this.highScore = data.highScore;
             if (typeof data.totalCoins === 'number') this.totalCoins = data.totalCoins;
             if (typeof data.missionIdx === 'number') this.missionIdx = data.missionIdx;
+            if (typeof data.sound === 'boolean') {
+                this.sound = data.sound;
+                audio.enabled = data.sound;
+            }
             if (data.upgrades) this.upgrades = Object.assign({ slow: 1, spin: 1, magnet: 1, boot: 1, penalty: 1 }, data.upgrades);
         } catch (e) {}
     },
@@ -400,6 +470,7 @@ const profile = {
                 highScore: this.highScore,
                 totalCoins: this.totalCoins,
                 missionIdx: this.missionIdx || 0,
+                sound: audio.enabled,
                 upgrades: this.upgrades
             }));
         } catch (e) {}
@@ -410,6 +481,18 @@ const profile = {
 };
 
 profile.load();
+
+// Feedback Tátil / Vibração Mobile (Discreto e Imersivo)
+function triggerHaptic(type) {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try {
+            if (type === 'dodge') navigator.vibrate(15);
+            else if (type === 'spin') navigator.vibrate(30);
+            else if (type === 'goal') navigator.vibrate([40, 40, 70]);
+            else if (type === 'crash') navigator.vibrate(90);
+        } catch (e) {}
+    }
+}
 
 // =========================================================
 // ESTADO DO JOGO
@@ -717,7 +800,8 @@ function drawSoccerPlayer(c, x, y, opts = {}) {
         rotation = 0,
         isGoalkeeper = false,
         isSliding = false,
-        isGolden = false
+        isGolden = false,
+        isCaptain = false
     } = opts;
 
     c.save();
@@ -804,6 +888,12 @@ function drawSoccerPlayer(c, x, y, opts = {}) {
     c.beginPath();
     c.roundRect(-4, 0, 8, 12, 3);
     c.fill();
+    if (isCaptain) {
+        c.fillStyle = '#facc15';
+        c.fillRect(-4, 5, 8, 4);
+        c.fillStyle = '#000000';
+        c.fillRect(-1, 6, 2, 2);
+    }
     // Antebraço e mão
     c.fillStyle = skin;
     c.beginPath();
@@ -1267,11 +1357,17 @@ function initMenuUI() {
     });
 
     // Som no menu
-    menuSoundBtn.addEventListener('click', () => {
-        audio.init();
-        const on = audio.toggle();
-        menuSoundBtn.textContent = on ? '🔊 Som' : '🔇 Mudo';
-    });
+    if (menuSoundBtn) {
+        menuSoundBtn.textContent = audio.enabled ? '🔊 Som' : '🔇 Mudo';
+        menuSoundBtn.addEventListener('click', () => {
+            audio.init();
+            const on = audio.toggle();
+            profile.sound = on;
+            profile.save();
+            menuSoundBtn.textContent = on ? '🔊 Som' : '🔇 Mudo';
+            if (pauseSoundBtn) pauseSoundBtn.textContent = on ? '🔊 Som' : '🔇 Mudo';
+        });
+    }
 }
 
 
@@ -1429,19 +1525,20 @@ function addCoinSparkle(x, y, count = 6) {
 
 function addConfetti(count = 90) {
     const colors = ['#facc15', '#22c55e', '#38bdf8', '#ef4444', '#e879f9', '#ffffff'];
+    const originY = player && player.y ? player.y - 80 : height / 2;
     for (let i = 0; i < count; i++) {
         particles.push({
             type: 'confetti',
-            x: width / 2 + (Math.random() - 0.5) * 160,
-            y: goalPost.y + 40,
-            vx: (Math.random() - 0.5) * 280,
-            vy: -Math.random() * 260 - 120,
-            gravity: 440,
+            x: width / 2 + (Math.random() - 0.5) * (width * 0.75),
+            y: originY,
+            vx: (Math.random() - 0.5) * 320,
+            vy: -Math.random() * 260 - 100,
+            gravity: 420,
             size: Math.random() * 6 + 4,
             color: colors[i % colors.length],
             angle: Math.random() * Math.PI * 2,
             vAngle: (Math.random() - 0.5) * 8,
-            life: 1.0,
+            life: 1.2,
             decay: 0.35
         });
     }
@@ -1450,9 +1547,10 @@ function addConfetti(count = 90) {
 function updateParticles(dt) {
     for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
-        p.life -= p.decay * dt;
+        const decay = p.decay !== undefined ? p.decay : 1.2;
+        p.life -= decay * dt;
 
-                if (p.type === 'text') {
+        if (p.type === 'text') {
             p.y += p.vy * dt;
             ctx.save();
             ctx.globalAlpha = Math.max(0, p.life);
@@ -1503,6 +1601,51 @@ function updateParticles(dt) {
 }
 
 // =========================================================
+// MARCAS DE CARRINHO / SLIDE-TACKLE SKID MARKS NO GRAMADO
+// =========================================================
+let turfSkids = [];
+
+function addTurfSkid(x, y, vx, vy) {
+    const stadium = getCurrentStadium();
+    let col = 'rgba(20, 83, 45, 0.45)';
+    if (stadium.type === 'dirt') col = 'rgba(74, 38, 14, 0.55)';
+    else if (stadium.type === 'snow') col = 'rgba(186, 230, 253, 0.65)';
+    else if (stadium.type === 'rain') col = 'rgba(15, 23, 42, 0.40)';
+    else if (stadium.type === 'final') col = 'rgba(15, 23, 42, 0.30)';
+
+    const angle = Math.atan2(vy || 100, vx || 0) + Math.PI / 2;
+    turfSkids.push({
+        x: x,
+        y: y,
+        w: Math.random() * 6 + 10,
+        len: Math.random() * 12 + 22,
+        angle: angle,
+        color: col,
+        alpha: 0.65
+    });
+    if (turfSkids.length > 50) turfSkids.shift();
+}
+
+function drawTurfSkids(dt) {
+    for (let i = turfSkids.length - 1; i >= 0; i--) {
+        const s = turfSkids[i];
+        s.y += scrollSpeed * timeScale * dt;
+        s.alpha -= 0.14 * dt * timeScale;
+        if (s.alpha <= 0 || s.y > height * 1.5) {
+            turfSkids.splice(i, 1);
+            continue;
+        }
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, s.alpha);
+        ctx.fillStyle = s.color;
+        ctx.translate(s.x, s.y);
+        ctx.rotate(s.angle);
+        ctx.fillRect(-s.w / 2, -s.len / 2, s.w, s.len);
+        ctx.restore();
+    }
+}
+
+// =========================================================
 // RENDERIZAÇÃO REALISTA DO CAMPO (ESTILO TOUCHDOWN HERO + FUTEBOL)
 // =========================================================
 function drawPitch(dt = 0.016) {
@@ -1545,7 +1688,7 @@ function drawPitch(dt = 0.016) {
         ctx.fillStyle = 'rgba(122, 62, 27, 0.45)';
         for (let i = 0; i < 18; i++) {
             const rx = margin + (Math.sin(i * 123) * 0.5 + 0.5) * (width - margin * 2);
-            const ry = (extTop + (i * 95 + fieldY * 0.5)) % height;
+            const ry = extTop + (((i * 95 + fieldY * 0.5) % fullH + fullH) % fullH);
             ctx.beginPath();
             ctx.ellipse(rx, ry, 28, 12, 0.2, 0, Math.PI * 2);
             ctx.fill();
@@ -1555,7 +1698,7 @@ function drawPitch(dt = 0.016) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
         for (let i = 0; i < 20; i++) {
             const rx = margin + (Math.sin(i * 97) * 0.5 + 0.5) * (width - margin * 2);
-            const ry = (extTop + (i * 85 + fieldY * 0.4)) % height;
+            const ry = extTop + (((i * 85 + fieldY * 0.4) % fullH + fullH) % fullH);
             ctx.beginPath();
             ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
             ctx.fill();
@@ -1565,12 +1708,15 @@ function drawPitch(dt = 0.016) {
         ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
         for (let i = 0; i < 14; i++) {
             const rx = margin + (Math.sin(i * 77) * 0.5 + 0.5) * (width - margin * 2);
-            const ry = (extTop + (i * 110 + fieldY * 0.6)) % height;
+            const ry = extTop + (((i * 110 + fieldY * 0.6) % fullH + fullH) % fullH);
             ctx.beginPath();
             ctx.ellipse(rx, ry, 22, 9, 0, 0, Math.PI * 2);
             ctx.fill();
         }
     }
+
+    // 4.5. MARCAS DINÂMICAS DE CARRINHO / ESCORREGÕES NO GRAMADO
+    drawTurfSkids(dt);
 
     // 5. LATERAIS COM BANCO DE RESERVAS E TORCIDA (IGUAL AO TOUCHDOWN HERO)
     drawSidelines(margin, extTop, fullH, stadium);
@@ -2131,6 +2277,23 @@ function spawnDefendersIfNeeded() {
                 number: 2,
                 dodged: false
             });
+        } else if (stage >= 2 && waveType > 0.82) {
+            // TIPO 4: XERIFÃO DA ZAGA (Zagueiro xerife central com braçadeira de capitão e bote feroz)
+            defenders.push({
+                x: width / 2,
+                y: -85,
+                radius: 22,
+                type: 'SWEEPER',
+                state: 'NORMAL',
+                stateTimer: 0,
+                baseVy: scrollSpeed * 0.32 + (stage * 9),
+                patrolDir: Math.random() < 0.5 ? 1 : -1,
+                runCycle: 0,
+                team: rivalTeam,
+                number: 3,
+                isCaptain: true,
+                dodged: false
+            });
         } else {
             // TIPO 3: CARRINHO DESLIZANTE (SLIDER)
             const lane = Math.floor(Math.random() * 3);
@@ -2259,6 +2422,9 @@ function updateDefenders(dt) {
             } else if (d.state === 'TACKLING') {
                 d.x += d.tackleVx * timeScale * dt;
                 d.y += scrollSpeed * timeScale * dt;
+                if (Math.random() < 0.35) {
+                    addTurfSkid(d.x, d.y + 14, d.tackleVx, scrollSpeed * 0.5);
+                }
                 if (stadium.weather === 'rain') addWaterSplash(d.x, d.y + 14, 3);
                 else addDustPuff(d.x, d.y + 12, 3);
                 d.stateTimer -= dt * timeScale;
@@ -2268,6 +2434,51 @@ function updateDefenders(dt) {
                 }
             } else if (d.state === 'STUMBLED') {
                 d.y += scrollSpeed * 0.7 * timeScale * dt;
+            }
+        } else if (d.type === 'SWEEPER') {
+            if (d.state === 'NORMAL') {
+                d.y += (scrollSpeed + d.baseVy) * timeScale * dt;
+                d.x += d.patrolDir * (115 + stage * 10) * timeScale * dt;
+                if (d.x < pitchMargin + 28) {
+                    d.x = pitchMargin + 28;
+                    d.patrolDir = 1;
+                } else if (d.x > width - pitchMargin - 28) {
+                    d.x = width - pitchMargin - 28;
+                    d.patrolDir = -1;
+                }
+                if (distToPlayer < 240 && d.y < player.y - 10) {
+                    d.state = 'ALERT';
+                    d.stateTimer = 0.30;
+                    audio.playAlert();
+                }
+            } else if (d.state === 'ALERT') {
+                d.y += scrollSpeed * timeScale * dt;
+                d.stateTimer -= dt * timeScale;
+                if (d.stateTimer <= 0) {
+                    d.state = 'TACKLING';
+                    const angle = Math.atan2(player.y - d.y, player.x - d.x);
+                    const spd = 310 + Math.min(stage, 6) * 22;
+                    d.tackleVx = Math.cos(angle) * spd;
+                    d.tackleVy = Math.sin(angle) * spd + scrollSpeed * 0.3;
+                    d.stateTimer = 0.75;
+                    addDustPuff(d.x, d.y + 12, 4);
+                }
+            } else if (d.state === 'TACKLING') {
+                d.x += d.tackleVx * timeScale * dt;
+                d.y += (d.tackleVy + scrollSpeed * 0.4) * timeScale * dt;
+                if (Math.random() < 0.45) {
+                    addTurfSkid(d.x, d.y + 14, d.tackleVx, d.tackleVy);
+                }
+                addDustPuff(d.x, d.y + 12, 2);
+                d.stateTimer -= dt * timeScale;
+                if (d.stateTimer <= 0) {
+                    d.state = 'STUMBLED';
+                    d.stateTimer = 1.3;
+                    addDustPuff(d.x, d.y, 5);
+                }
+            } else if (d.state === 'STUMBLED') {
+                d.y += scrollSpeed * 0.7 * timeScale * dt;
+                d.stateTimer -= dt * timeScale;
             }
         }
 
@@ -2280,11 +2491,12 @@ function updateDefenders(dt) {
             comboTimer = 3.6;
 
             const mult = Math.min(5, comboCount);
-            const pts = 150 * mult;
+            const pts = (d.type === 'SWEEPER' ? 250 : 150) * mult;
             score += pts;
             if (scoreEl) scoreEl.textContent = score;
 
             audio.playCombo(comboCount);
+            triggerHaptic('dodge');
 
             // Texto flutuante de pontuação
             particles.push({
@@ -2302,7 +2514,9 @@ function updateDefenders(dt) {
                 if (comboCountEl) comboCountEl.textContent = 'x' + comboCount;
             }
 
-            if (comboCount >= 4) {
+            if (d.type === 'SWEEPER') {
+                showToast('⭐ DRIBLE NO XERIFÃO!', `+${pts} PONTOS!`);
+            } else if (comboCount >= 4) {
                 showToast(`💥 EM CHAMAS x${comboCount}!`, `+${pts} PONTOS!`);
             } else if (comboCount === 3) {
                 showToast('⚡ ESPETACULAR x3!', `+${pts} PONTOS!`);
@@ -2320,12 +2534,23 @@ function updateDefenders(dt) {
             if (distToPlayer < player.radius + d.radius - 4) {
                 if (superSpeedTimer > 0) {
                     d.state = 'STUMBLED';
+                    d.stateTimer = 1.3;
                     d.vx = -d.vx;
                     addDustPuff(d.x, d.y, 6);
                     audio.playWhoosh();
                     showToast('💥 ATROPELOU!', '+200 PTS');
                     score += 200;
-                } else if (invulnerableTimer <= 0) {
+                    triggerHaptic('dodge');
+                } else if (isSpinning || invulnerableTimer > 0) {
+                    d.state = 'STUMBLED';
+                    d.stateTimer = 1.4;
+                    addDustPuff(d.x, d.y, 6);
+                    audio.playWhoosh();
+                    showToast('🌀 GIRO DO CRAQUE!', '+250 PTS');
+                    score += 250;
+                    triggerHaptic('spin');
+                } else {
+                    triggerHaptic('crash');
                     triggerGameOver('O ZAGUEIRO DESARMOU VOCÊ!');
                     return;
                 }
@@ -2358,7 +2583,8 @@ function updateDefenders(dt) {
             hair: HAIRS[0],
             number: d.number,
             runCycle: d.runCycle,
-            isSliding: d.state === 'TACKLING' && (d.type === 'SLIDER' || d.type === 'PINCER')
+            isSliding: d.state === 'TACKLING' && (d.type === 'SLIDER' || d.type === 'PINCER'),
+            isCaptain: !!d.isCaptain
         });
 
         // Balão de Alerta '!'
@@ -2681,6 +2907,7 @@ function handleGoalSuccess() {
 
 function advanceToNextStage() {
     stage++;
+    goals++;
     stageDist = 0; // Reinicia a contagem de 0m para a nova fase
 
     const bonusScore = 1000 + (stage - 1) * 250;
@@ -2691,6 +2918,7 @@ function advanceToNextStage() {
     profile.save();
 
     audio.playCheckpoint();
+    triggerHaptic('goal');
     addConfetti(100);
     screenShake = 16;
 
@@ -3004,6 +3232,10 @@ function initShopUI() {
 // =========================================================
 // CONTROLES DE PARTIDA (SLOW-MO E GIRO)
 // =========================================================
+let hasStartedRunning = false;
+let wasSlowMo = false;
+let heartbeatTimer = 0;
+
 function setSlowMo(active) {
     // Mantido por compatibilidade
 }
@@ -3012,9 +3244,21 @@ function updateSlowMoState(dt) {
     const isHolding = isTouching || isMouseDown;
 
     if (gameState === STATE.RUNNING) {
+        if (!hasStartedRunning) {
+            // Aguardando primeiro toque para iniciar a corrida (Kickoff)
+            isSlowMo = false;
+            timeScale = 1.0;
+            camera.targetZoom = 1.0;
+            camera.targetOffsetY = 0;
+            slowEnergy = 100;
+            if (appEl) appEl.classList.remove('slowmo');
+            if (slowFillEl) slowFillEl.style.width = '100%';
+            return;
+        }
+
         if (!isHolding) {
             // SOLTOU O DEDO: Câmera Lenta ativada e o campo abre (zoom-out)!
-            if (slowEnergy > 5) {
+            if (slowEnergy > 4) {
                 isSlowMo = true;
                 timeScale = 0.28; // Bullet-time suave
                 camera.targetZoom = 0.70; // O campo abre! Visão ampla!
@@ -3057,6 +3301,22 @@ function updateSlowMoState(dt) {
         if (appEl) appEl.classList.remove('slowmo');
     }
 
+    // Efeitos Sonoros Dinâmicos e Tensão Cardíaca em Bullet-Time
+    if (isSlowMo && !wasSlowMo) {
+        audio.playSlowMoStart();
+        heartbeatTimer = 0.05;
+        triggerHaptic('spin');
+    } else if (isSlowMo) {
+        heartbeatTimer -= dt;
+        if (heartbeatTimer <= 0) {
+            audio.playHeartbeat();
+            heartbeatTimer = 0.65;
+        }
+    } else if (!isSlowMo && wasSlowMo) {
+        audio.playSlowMoEnd();
+    }
+    wasSlowMo = isSlowMo;
+
     // Interpolação suave da câmera
     camera.zoom += (camera.targetZoom - camera.zoom) * Math.min(1, 8 * dt);
     camera.offsetY += (camera.targetOffsetY - camera.offsetY) * Math.min(1, 8 * dt);
@@ -3071,9 +3331,10 @@ function triggerSpin() {
     spinCooldown = getSpinCooldownMax();
     isSpinning = true;
     spinAngle = 0;
-    invulnerableTimer = 0.5;
+    invulnerableTimer = 0.55;
 
     audio.playWhoosh();
+    triggerHaptic('spin');
     showToast('🔄 GIRO 360°!', 'DRIBLE ESPETACULAR');
 }
 
@@ -3207,6 +3468,9 @@ function startGame() {
     appEl.classList.remove('pen', 'slowmo');
 
     gameState = STATE.RUNNING;
+    hasStartedRunning = false;
+    if (kickoffHintEl) kickoffHintEl.classList.remove('hidden');
+
     stage = 1;
     stageDist = 0;
     totalDist = 0;
@@ -3233,6 +3497,7 @@ function startGame() {
     defenders = [];
     pickups = [];
     particles = [];
+    turfSkids = [];
     comboCount = 0;
     comboTimer = 0;
     maxComboSession = 0;
@@ -3249,6 +3514,8 @@ function startGame() {
 
 function triggerGameOver(reason) {
     gameState = STATE.GAME_OVER;
+    hasStartedRunning = false;
+    if (kickoffHintEl) kickoffHintEl.classList.add('hidden');
     audio.playWhistle(true);
 
     const isNew = score > profile.highScore;
@@ -3276,6 +3543,8 @@ function triggerGameOver(reason) {
 
 function openMenu() {
     gameState = STATE.MENU;
+    hasStartedRunning = false;
+    if (kickoffHintEl) kickoffHintEl.classList.add('hidden');
     menuScreen.classList.remove('hidden');
     overScreen.classList.add('hidden');
     pauseScreen.classList.add('hidden');
@@ -3294,16 +3563,26 @@ let touchOriginY = 0;
 let playerOriginX = 0;
 let playerOriginY = 0;
 let isTouching = false;
+let activeTouchId = null;
 
 canvas.addEventListener('touchstart', (e) => {
     audio.init();
     if (gameState === STATE.RUNNING) {
-        if (e.touches.length > 0) {
+        if (activeTouchId === null && e.changedTouches.length > 0) {
+            const t = e.changedTouches[0];
+            activeTouchId = t.identifier;
             isTouching = true;
-            touchOriginX = e.touches[0].clientX;
-            touchOriginY = e.touches[0].clientY;
+            touchOriginX = t.clientX;
+            touchOriginY = t.clientY;
             playerOriginX = player.x;
             playerOriginY = player.y;
+
+            if (!hasStartedRunning) {
+                hasStartedRunning = true;
+                if (kickoffHintEl) kickoffHintEl.classList.add('hidden');
+                audio.playWhistle();
+                addDustPuff(player.x, player.y + 14, 6);
+            }
         }
     } else if (gameState === STATE.PENALTY_AIM && e.touches.length > 0) {
         const rect = canvas.getBoundingClientRect();
@@ -3316,11 +3595,17 @@ canvas.addEventListener('touchstart', (e) => {
 }, { passive: true });
 
 canvas.addEventListener('touchmove', (e) => {
-    if (gameState === STATE.RUNNING && isTouching && e.touches.length > 0) {
-        const dx = e.touches[0].clientX - touchOriginX;
-        const dy = e.touches[0].clientY - touchOriginY;
-        player.targetX = playerOriginX + dx;
-        player.targetY = playerOriginY + dy;
+    if (gameState === STATE.RUNNING && isTouching) {
+        for (let i = 0; i < e.touches.length; i++) {
+            const t = e.touches[i];
+            if (t.identifier === activeTouchId) {
+                const dx = t.clientX - touchOriginX;
+                const dy = t.clientY - touchOriginY;
+                player.targetX = playerOriginX + dx;
+                player.targetY = playerOriginY + dy;
+                break;
+            }
+        }
     } else if (gameState === STATE.PENALTY_AIM && isPenFlicking && e.touches.length > 0) {
         const rect = canvas.getBoundingClientRect();
         const px = e.touches[0].clientX - rect.left;
@@ -3330,8 +3615,15 @@ canvas.addEventListener('touchmove', (e) => {
 }, { passive: true });
 
 canvas.addEventListener('touchend', (e) => {
-    isTouching = false;
-    if (gameState === STATE.PENALTY_AIM && isPenFlicking && penFlickTrail.length > 1) {
+    if (gameState === STATE.RUNNING) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === activeTouchId) {
+                activeTouchId = null;
+                isTouching = false;
+                break;
+            }
+        }
+    } else if (gameState === STATE.PENALTY_AIM && isPenFlicking && penFlickTrail.length > 1) {
         isPenFlicking = false;
         const start = penFlickStart;
         const end = penFlickTrail[penFlickTrail.length - 1];
@@ -3364,6 +3656,13 @@ canvas.addEventListener('mousedown', (e) => {
         touchOriginY = e.clientY;
         playerOriginX = player.x;
         playerOriginY = player.y;
+
+        if (!hasStartedRunning) {
+            hasStartedRunning = true;
+            if (kickoffHintEl) kickoffHintEl.classList.add('hidden');
+            audio.playWhistle();
+            addDustPuff(player.x, player.y + 14, 6);
+        }
     } else if (gameState === STATE.PENALTY_AIM) {
         const rect = canvas.getBoundingClientRect();
         const px = e.clientX - rect.left;
@@ -3531,16 +3830,22 @@ pauseBtn.addEventListener('click', () => {
     if (gameState === STATE.RUNNING) {
         gameState = STATE.PAUSED;
         setSlowMo(false);
+        if (kickoffHintEl) kickoffHintEl.classList.add('hidden');
+        if (pauseSoundBtn) pauseSoundBtn.textContent = audio.enabled ? '🔊 Som' : '🔇 Mudo';
         pauseScreen.classList.remove('hidden');
     }
 });
 resumeBtn.addEventListener('click', () => {
     gameState = STATE.RUNNING;
+    if (!hasStartedRunning && kickoffHintEl) kickoffHintEl.classList.remove('hidden');
     pauseScreen.classList.add('hidden');
 });
 pauseSoundBtn.addEventListener('click', () => {
     const on = audio.toggle();
+    profile.sound = on;
+    profile.save();
     pauseSoundBtn.textContent = on ? '🔊 Som' : '🔇 Mudo';
+    if (menuSoundBtn) menuSoundBtn.textContent = on ? '🔊 Som' : '🔇 Mudo';
 });
 pauseMenuBtn.addEventListener('click', openMenu);
 
