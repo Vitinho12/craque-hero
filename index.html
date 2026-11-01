@@ -72,15 +72,13 @@
         <span class="combo-lbl">COMBO!</span>
     </div>
 
-    <!-- Botões de ação durante a corrida (Posicionados no lado esquerdo) -->
+    <!-- Botões de ação durante a corrida (Giro no canto inferior esquerdo) -->
     <div id="controls" class="hidden">
-        <button id="slow-btn" class="act-btn act-slow" aria-label="Câmera lenta" type="button">
-            <span class="ico">⏱️</span><span class="txt">SLOW</span>
-        </button>
         <button id="spin-btn" class="act-btn act-spin" aria-label="Giro" type="button">
             <span class="ico">🌀</span><span class="txt">GIRO</span>
             <div id="spin-shade"></div>
         </button>
+        <button id="slow-btn" type="button" style="display:none"></button>
     </div>
 
     <!-- Avisos de Dribles e Banner Central -->
@@ -99,9 +97,11 @@
     <!-- MENU PRINCIPAL -->
     <div id="menu" class="screen">
         <div class="menu-inner">
-            <!-- Capa Oficial Craque Hero -->
-            <div class="menu-cover-container">
-                <img src="cover.png" alt="Craque Hero" class="menu-cover-img">
+            <!-- Cabeçalho Limpo e Moderno do Menu -->
+            <div class="logo-box">
+                <div class="logo-top-badge">⭐ EDIÇÃO BRASIL 2026 ⭐</div>
+                <h1 class="game-title">CRAQUE<br><span>HERO</span></h1>
+                <p class="tagline">Segure para correr • Solte para abrir o campo</p>
             </div>
 
             <!-- Card de Perfil do Jogador -->

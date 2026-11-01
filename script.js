@@ -430,13 +430,65 @@ let width = 0;
 let height = 0;
 let pitchMargin = 16; // Campo aproveita 100% da tela (sem barras pretas de torcida)
 
-// Banco de Estádios e Ambientes por Fase
+// =========================================================
+// BANCO DE ESTÁDIOS E AMBIENTES (PISOS TEMÁTICOS AUTÊNTICOS)
+// =========================================================
 const STADIUMS = [
-    { id: 'maracana', name: '☀️ MARACANÃ (SOL)', grassLight: '#27ae60', grassDark: '#1e824c', line: 'rgba(255, 255, 255, 0.82)', weather: 'clear' },
-    { id: 'night', name: '💡 NOITE SOB REFLETORES', grassLight: '#1f7a4d', grassDark: '#145c38', line: 'rgba(255, 255, 255, 0.92)', weather: 'night' },
-    { id: 'rain', name: '🌧️ CLÁSSICO NA CHUVA', grassLight: '#166534', grassDark: '#0e4424', line: 'rgba(255, 255, 255, 0.78)', weather: 'rain' },
-    { id: 'derby', name: '🔥 SINALIZADORES', grassLight: '#229954', grassDark: '#196f3d', line: 'rgba(255, 255, 255, 0.88)', weather: 'smoke' },
-    { id: 'final', name: '🏆 GRANDE FINAL', grassLight: '#2ecc71', grassDark: '#27ae60', line: 'rgba(254, 240, 138, 0.95)', weather: 'final' }
+    {
+        id: 'maracana',
+        name: '☀️ MARACANÃ (SOL)',
+        type: 'classic',
+        grassLight: '#27ae60',
+        grassDark: '#1e824c',
+        line: 'rgba(255, 255, 255, 0.90)',
+        sidelineTrack: '#0f172a',
+        dirtTexture: false,
+        weather: 'clear'
+    },
+    {
+        id: 'terrao',
+        name: '🏜️ TERRÃO DA VÁRZEA',
+        type: 'dirt',
+        grassLight: '#9a582c',
+        grassDark: '#834720',
+        line: 'rgba(254, 243, 199, 0.70)',
+        sidelineTrack: '#542d14',
+        dirtTexture: true,
+        weather: 'dust'
+    },
+    {
+        id: 'chuva',
+        name: '🌧️ CLÁSSICO NA TEMPESTADE',
+        type: 'rain',
+        grassLight: '#145c32',
+        grassDark: '#0d4022',
+        line: 'rgba(255, 255, 255, 0.75)',
+        sidelineTrack: '#071d10',
+        dirtTexture: false,
+        weather: 'rain'
+    },
+    {
+        id: 'inverno',
+        name: '❄️ CHAMPIONS NA NEVE',
+        type: 'snow',
+        grassLight: '#e0f2fe',
+        grassDark: '#bae6fd',
+        line: '#f97316', // Linhas laranjas de inverno europeu!
+        sidelineTrack: '#0284c7',
+        dirtTexture: false,
+        weather: 'snow'
+    },
+    {
+        id: 'final',
+        name: '🏆 GRANDE FINAL DE GALA',
+        type: 'final',
+        grassLight: '#22c55e',
+        grassDark: '#15803d',
+        line: '#fef08a', // Linhas douradas de decisão!
+        sidelineTrack: '#0f172a',
+        dirtTexture: false,
+        weather: 'final'
+    }
 ];
 
 function getCurrentStadium() {
@@ -444,9 +496,20 @@ function getCurrentStadium() {
     return STADIUMS[idx];
 }
 
+// CÂMERA DINÂMICA (CAMPO ABRE EM SLOW-MO IGUAL AO TOUCHDOWN HERO)
+const camera = {
+    zoom: 1.0,
+    targetZoom: 1.0,
+    offsetY: 0,
+    targetOffsetY: 0
+};
+
 // Helpers dinâmicos das melhorias do jogador
 function getSlowDrainRate() {
     return Math.max(14, 28 - (profile.upgrades.slow - 1) * 3);
+}
+function getSlowRecoveryRate() {
+    return 24 + (profile.upgrades.slow - 1) * 6;
 }
 function getSpinCooldownMax() {
     return Math.max(2.0, 4.0 - (profile.upgrades.spin - 1) * 0.45);
@@ -1440,184 +1503,243 @@ function updateParticles(dt) {
 }
 
 // =========================================================
-// RENDERIZAÇÃO DO CAMPO E CLIMA (100% FULL-WIDTH, SEM BARRAS)
+// RENDERIZAÇÃO REALISTA DO CAMPO (ESTILO TOUCHDOWN HERO + FUTEBOL)
 // =========================================================
 function drawPitch(dt = 0.016) {
     const stadium = getCurrentStadium();
+    const margin = 28; // Linha lateral a 28px das bordas
 
-    // 1. Fundo do gramado moderno
+    // Margens ampliadas para suportar o zoom-out (campo aberto) sem bordas pretas
+    const extLeft = -width * 0.5;
+    const extRight = width * 1.5;
+    const extTop = -height * 0.5;
+    const extBottom = height * 1.5;
+    const fullW = extRight - extLeft;
+    const fullH = extBottom - extTop;
+
+    // 1. FUNDO DO GRAMADO / PISO TEMÁTICO
     ctx.fillStyle = stadium.grassDark;
-    ctx.fillRect(0, -10, width, height + 30);
+    ctx.fillRect(extLeft, extTop, fullW, fullH);
 
-    // 2. Faixas verticais elegantes de corte (Estilo Premier League)
+    // 2. FAIXAS VERTICAIS DE CORTE DE GRAMA
     const stripeCount = 6;
-    const stripeW = width / stripeCount;
+    const stripeW = (width - margin * 2) / stripeCount;
     for (let i = 0; i < stripeCount; i++) {
         if (i % 2 === 0) {
             ctx.fillStyle = stadium.grassLight;
-            ctx.fillRect(i * stripeW, -10, stripeW, height + 30);
+            ctx.fillRect(margin + i * stripeW, extTop, stripeW, fullH);
         }
     }
 
-    // 3. Efeito Parallax de corte da grama descendo (sem círculos repetitivos)
-    const mowingSpacing = 160;
+    // 3. FAIXAS HORIZONTAIS DE CORTE COM PARALLAX (SEM CÍRCULOS REPETITIVOS)
+    const mowingSpacing = 140;
     const mowOffset = fieldY % mowingSpacing;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
-    for (let y = -mowingSpacing + mowOffset; y < height + mowingSpacing; y += mowingSpacing) {
-        ctx.fillRect(0, y, width, mowingSpacing * 0.45);
+    for (let y = extTop + mowOffset; y < extBottom; y += mowingSpacing) {
+        ctx.fillRect(margin, y, width - margin * 2, mowingSpacing * 0.45);
     }
 
-    // 4. Linhas laterais brancas do campo
+    // 4. TEXTURA DETALHADA DO PISO (TERRA BATIDA, NEVE OU CHUVA)
+    if (stadium.type === 'dirt') {
+        // Manchas de terra batida e grama gasta
+        ctx.fillStyle = 'rgba(122, 62, 27, 0.45)';
+        for (let i = 0; i < 18; i++) {
+            const rx = margin + (Math.sin(i * 123) * 0.5 + 0.5) * (width - margin * 2);
+            const ry = (extTop + (i * 95 + fieldY * 0.5)) % height;
+            ctx.beginPath();
+            ctx.ellipse(rx, ry, 28, 12, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    } else if (stadium.type === 'snow') {
+        // Cristais de gelo e neve acumulada
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        for (let i = 0; i < 20; i++) {
+            const rx = margin + (Math.sin(i * 97) * 0.5 + 0.5) * (width - margin * 2);
+            const ry = (extTop + (i * 85 + fieldY * 0.4)) % height;
+            ctx.beginPath();
+            ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    } else if (stadium.type === 'rain') {
+        // Poças d'água refletivas no gramado molhado
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
+        for (let i = 0; i < 14; i++) {
+            const rx = margin + (Math.sin(i * 77) * 0.5 + 0.5) * (width - margin * 2);
+            const ry = (extTop + (i * 110 + fieldY * 0.6)) % height;
+            ctx.beginPath();
+            ctx.ellipse(rx, ry, 22, 9, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // 5. LATERAIS COM BANCO DE RESERVAS E TORCIDA (IGUAL AO TOUCHDOWN HERO)
+    drawSidelines(margin, extTop, fullH, stadium);
+
+    // 6. LINHAS DE MARCAÇÃO DO CAMPO (BRANCAS OU LARANJAS NA NEVE)
     ctx.strokeStyle = stadium.line;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(pitchMargin, -10);
-    ctx.lineTo(pitchMargin, height + 20);
-    ctx.moveTo(width - pitchMargin, -10);
-    ctx.lineTo(width - pitchMargin, height + 20);
+    ctx.moveTo(margin, extTop);
+    ctx.lineTo(margin, extBottom);
+    ctx.moveTo(width - margin, extTop);
+    ctx.lineTo(width - margin, extBottom);
     ctx.stroke();
 
-    // 5. Marcações discretas de distância no gramado (250m, 500m, 750m)
-    const distInterval = 250;
-    const currentQuarter = Math.floor(stageDist / distInterval);
-    const nextMarkerDist = (currentQuarter + 1) * distInterval;
-    if (nextMarkerDist < STAGE_GOAL_METERS) {
-        const markerMetersAhead = nextMarkerDist - stageDist;
-        const markerPixelY = player.y - (markerMetersAhead / (scrollSpeed * 0.22)) * scrollSpeed;
-        if (markerPixelY > -60 && markerPixelY < height + 60) {
-            ctx.save();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([12, 10]);
-            ctx.beginPath();
-            ctx.moveTo(pitchMargin, markerPixelY);
-            ctx.lineTo(width - pitchMargin, markerPixelY);
-            ctx.stroke();
-            ctx.setLineDash([]);
-
-            // Badge central com a quilometragem/metragem
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-            ctx.beginPath();
-            ctx.roundRect(width / 2 - 38, markerPixelY - 12, 76, 24, 6);
-            ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 12px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`${nextMarkerDist}m`, width / 2, markerPixelY);
-            ctx.restore();
+    // 7. ESCUDO RETRÔ DE FUTEBOL PINTADO NO GRAMADO A CADA 500m
+    const crestInterval = 500;
+    const currentHalf = Math.floor(stageDist / crestInterval);
+    const nextCrestDist = (currentHalf + 1) * crestInterval;
+    if (nextCrestDist < STAGE_GOAL_METERS) {
+        const crestAhead = nextCrestDist - stageDist;
+        const crestY = player.y - (crestAhead / (scrollSpeed * 0.22)) * scrollSpeed;
+        if (crestY > -120 && crestY < height + 120) {
+            drawCenterPitchCrest(width / 2, crestY, nextCrestDist);
         }
     }
 
-    // 6. A partir de 820m da fase, a Grande Área e o Gol aproximam-se!
+    // 8. FAIXA DE CELEBRAÇÃO / END ZONE PINTADA NO GRAMADO AOS 1000m
     if (stageDist >= 880) {
         const distAhead = STAGE_GOAL_METERS - stageDist;
-        const gateScreenY = (player.y - 80) - (distAhead / 120) * (height * 0.6);
-        if (gateScreenY > -100 && gateScreenY < height + 50) {
-            drawStadiumGate(gateScreenY, stage, stadium);
+        const lineY = (player.y - 70) - (distAhead / 120) * (height * 0.65);
+        if (lineY > -140 && lineY < height + 80) {
+            drawEndZoneCelebration(lineY, stage, stadium);
         }
     }
 
-    // 7. Efeitos climáticos do estádio
+    // 9. EFEITOS CLIMÁTICOS
     drawWeather(stadium, dt);
 }
 
-
-// =========================================================
-// PORTAL DE CHECKPOINT DE ESTÁDIO (TRANSIÇÃO CONTÍNUA)
-// =========================================================
-function drawStadiumGate(gateY, currentStage, stadium) {
+// Laterais detalhadas com banco de reservas e torcedores
+function drawSidelines(margin, topY, totalH, stadium) {
     ctx.save();
-    const gateW = Math.min(width * 0.94, 380);
-    const gateX = (width - gateW) / 2;
+    // Pista lateral
+    ctx.fillStyle = stadium.sidelineTrack;
+    ctx.fillRect(-width * 0.5, topY, width * 0.5 + margin, totalH);
+    ctx.fillRect(width - margin, topY, width * 0.5 + margin, totalH);
 
-    // Estrutura de Treliça Metálica Superior
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(gateX, gateY - 26, gateW, 30);
-    ctx.strokeStyle = '#facc15';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(gateX, gateY - 26, gateW, 30);
+    // Banco de reservas e técnicos na lateral esquerda
+    const t = performance.now() * 0.003;
+    const benchSpacing = 280;
+    const bOffset = (fieldY * 0.8) % benchSpacing;
 
-    // Postes Laterais do Pórtico
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(gateX, gateY, 18, 50);
-    ctx.fillRect(gateX + gateW - 18, gateY, 18, 50);
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(gateX, gateY, 18, 50);
-    ctx.strokeRect(gateX + gateW - 18, gateY, 18, 50);
+    for (let y = topY + bOffset; y < topY + totalH; y += benchSpacing) {
+        // Banco de reservas azul
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(4, y, 18, 54);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(4, y, 18, 54);
 
-    // Letreiro LED do Pórtico
-    const t = performance.now() * 0.005;
-    ctx.fillStyle = Math.sin(t * 3) > 0 ? '#facc15' : '#ffffff';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`🏁 PRÓXIMO ESTÁDIO: FASE ${currentStage + 1} 🏁`, width / 2, gateY - 11);
+        // Jogadores reservas sentados (camisas coloridas)
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(7, y + 6, 12, 10);
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(7, y + 22, 12, 10);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(7, y + 38, 12, 10);
 
-    // Linha de chegada no chão com quadrados xadrez
-    const squareSize = 14;
-    const squares = Math.floor(gateW / squareSize);
-    for (let i = 0; i < squares; i++) {
-        ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#0f172a';
-        ctx.fillRect(gateX + i * squareSize, gateY + 36, squareSize, 8);
+        // Técnico em pé na área técnica gesticulando
+        const coachBob = Math.sin(t + y * 0.01) * 3;
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(margin - 8, y + 27 + coachBob, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(margin - 11, y + 32 + coachBob, 6, 10);
+
+        // Fotógrafo com colete e câmera na lateral direita
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(width - margin + 6, y + 16, 14, 18);
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(width - margin + 2, y + 22, 6, 6);
     }
     ctx.restore();
 }
 
-function drawApproachingPenaltyArea(boxY, stadium) {
+// Escudo Clássico de Futebol Pintado no Gramado
+function drawCenterPitchCrest(cx, cy, dist) {
     ctx.save();
-    const boxW = Math.min(width * 0.88, 360);
-    const boxL = (width - boxW) / 2;
-    const boxH = 140;
+    ctx.translate(cx, cy);
 
-    // Grande Área
-    ctx.strokeStyle = stadium.line;
-    ctx.lineWidth = 3;
-    ctx.strokeRect(boxL, boxY, boxW, boxH);
-
-    // Marca do Pênalti
-    ctx.fillStyle = '#ffffff';
+    // Círculo Central Suave
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.arc(width / 2, boxY + boxH * 0.75, 5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Meia-lua
-    ctx.beginPath();
-    ctx.arc(width / 2, boxY + boxH * 0.75, 42, 0, Math.PI);
+    ctx.arc(0, 0, 56, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Trave visível ao fundo
-    const goalL = (width - Math.min(width * 0.78, 280)) / 2;
-    const goalR = width - goalL;
+    // Emblema Central
+    ctx.fillStyle = 'rgba(250, 204, 21, 0.22)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 36, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Estrela e Letreiro da Metragem
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.font = 'bold 16px var(--head), sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`★ ${dist}m ★`, 0, 0);
+
+    ctx.restore();
+}
+
+// Faixa de Celebração / Chegada pintada na grama aos 1000m
+function drawEndZoneCelebration(lineY, currentStage, stadium) {
+    ctx.save();
+    const margin = 28;
+    const zoneW = width - margin * 2;
+
+    // Faixa colorida no gramado
+    ctx.fillStyle = stadium.id === 'final' ? 'rgba(250, 204, 21, 0.85)' : 'rgba(22, 163, 74, 0.85)';
+    ctx.fillRect(margin, lineY - 32, zoneW, 54);
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 7;
-    ctx.strokeRect(goalL, boxY - 30, goalR - goalL, 30);
+    ctx.lineWidth = 3;
+    ctx.strokeRect(margin, lineY - 32, zoneW, 54);
+
+    // Padrão xadrez esportivo nas bordas da faixa
+    const sqSize = 14;
+    const cols = Math.floor(zoneW / sqSize);
+    for (let c = 0; c < cols; c++) {
+        ctx.fillStyle = c % 2 === 0 ? 'rgba(255, 255, 255, 0.9)' : 'rgba(15, 23, 42, 0.8)';
+        ctx.fillRect(margin + c * sqSize, lineY + 14, sqSize, 8);
+    }
+
+    // Texto da Fase pintado na grama
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 20px var(--head), sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 6;
+    ctx.fillText(`⚽ GOL! FASE ${currentStage + 1} ⚽`, width / 2, lineY - 8);
+
     ctx.restore();
 }
 
 function drawWeather(stadium, dt) {
     if (stadium.weather === 'rain') {
-        // Chuva dinâmica com trovões e relâmpagos
+        // Trovão e relâmpago realista
         lightningTimer -= dt;
         if (lightningTimer <= 0) {
             ctx.save();
             ctx.fillStyle = 'rgba(255, 255, 255, 0.48)';
-            ctx.fillRect(0, 0, width, height);
+            ctx.fillRect(-width * 0.5, -height * 0.5, width * 2, height * 2);
             ctx.restore();
             audio.playThunder();
-            screenShake = 12;
+            screenShake = 14;
             lightningTimer = Math.random() * 8 + 6;
         }
 
         ctx.save();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
         ctx.lineWidth = 1.6;
         for (let drop of rainDrops) {
             drop.y += drop.spd * dt;
             drop.x += 60 * dt;
-            if (drop.y > height + 20) {
-                drop.y = -20;
+            if (drop.y > height + 40) {
+                drop.y = -30;
                 drop.x = Math.random() * width;
                 if (Math.random() < 0.25) {
                     addWaterSplash(drop.x, height * Math.random(), 2);
@@ -1629,35 +1751,25 @@ function drawWeather(stadium, dt) {
             ctx.stroke();
         }
         ctx.restore();
-    } else if (stadium.weather === 'night') {
-        // Vinheta de noite sob refletores
+    } else if (stadium.weather === 'snow') {
+        // Flocos de neve caindo suavemente
         ctx.save();
-        const grad = ctx.createRadialGradient(width / 2, height / 2, width * 0.25, width / 2, height / 2, width * 0.75);
-        grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        grad.addColorStop(1, 'rgba(15, 23, 42, 0.38)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, width, height);
-
-        // Fachos de iluminação dos refletores
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.beginPath();
-        ctx.moveTo(0, 0); ctx.lineTo(width * 0.5, height * 0.6); ctx.lineTo(0, height * 0.4); ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(width, 0); ctx.lineTo(width * 0.5, height * 0.6); ctx.lineTo(width, height * 0.4); ctx.fill();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        const t = performance.now() * 0.002;
+        for (let i = 0; i < 35; i++) {
+            const sx = ((i * 47 + Math.sin(t + i) * 30) % width + width) % width;
+            const sy = ((i * 83 + performance.now() * 0.12) % height + height) % height;
+            ctx.beginPath();
+            ctx.arc(sx, sy, (i % 3) + 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.restore();
-    } else if (stadium.weather === 'smoke') {
-        // Sinalizadores da torcida (névoa avermelhada e quente)
+    } else if (stadium.weather === 'dust') {
+        // Poeira do Terrão da Várzea
         ctx.save();
         const t = performance.now() * 0.0015;
-        const alpha = 0.10 + Math.sin(t) * 0.03;
-        ctx.fillStyle = `rgba(239, 68, 68, ${alpha})`;
-        ctx.fillRect(0, 0, width, height);
-
-        const flareGrad = ctx.createLinearGradient(0, 0, 0, 180);
-        flareGrad.addColorStop(0, 'rgba(245, 158, 11, 0.22)');
-        flareGrad.addColorStop(1, 'rgba(245, 158, 11, 0)');
-        ctx.fillStyle = flareGrad;
-        ctx.fillRect(0, 0, width, 180);
+        ctx.fillStyle = `rgba(180, 107, 59, ${0.08 + Math.sin(t) * 0.03})`;
+        ctx.fillRect(-width * 0.5, -height * 0.5, width * 2, height * 2);
         ctx.restore();
     } else if (stadium.weather === 'final') {
         // Grande Final Dourada
@@ -1667,7 +1779,7 @@ function drawWeather(stadium, dt) {
         grad.addColorStop(0, `rgba(254, 240, 138, ${0.12 + Math.sin(t) * 0.04})`);
         grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, width, height);
+        ctx.fillRect(-width * 0.5, -height * 0.5, width * 2, height * 2);
         ctx.restore();
     }
 }
@@ -2218,6 +2330,25 @@ function updateDefenders(dt) {
                     return;
                 }
             }
+        }
+
+        // Indicadores táticos em Slow-Mo (Estilo Touchdown Hero aos 00:34)
+        if (isSlowMo) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.75)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 4]);
+            ctx.beginPath();
+            ctx.arc(d.x, d.y, 38, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Marcador tático X vermelho
+            ctx.fillStyle = '#ef4444';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('✕', d.x, d.y - 40);
+            ctx.restore();
         }
 
         // Renderiza Zagueiro
@@ -2874,40 +3005,62 @@ function initShopUI() {
 // CONTROLES DE PARTIDA (SLOW-MO E GIRO)
 // =========================================================
 function setSlowMo(active) {
-    if (active) {
-        if (gameState !== STATE.RUNNING) return;
-        if (slowEnergy <= 8) return;
-        if (!isSlowMo) {
-            isSlowMo = true;
-            if (appEl) appEl.classList.add('slowmo');
-            if (slowBtn) slowBtn.classList.add('held');
-            audio.playWhoosh();
-        }
-    } else {
-        if (isSlowMo) {
-            isSlowMo = false;
-            timeScale = 1.0;
-            if (appEl) appEl.classList.remove('slowmo');
-            if (slowBtn) slowBtn.classList.remove('held');
-        }
-    }
+    // Mantido por compatibilidade
 }
 
 function updateSlowMoState(dt) {
-    const drainRate = getSlowDrainRate();
-    if (isSlowMo && slowEnergy > 0) {
-        slowEnergy -= drainRate * dt;
-        timeScale = 0.42;
-        if (slowEnergy <= 0) {
-            slowEnergy = 0;
-            setSlowMo(false);
+    const isHolding = isTouching || isMouseDown;
+
+    if (gameState === STATE.RUNNING) {
+        if (!isHolding) {
+            // SOLTOU O DEDO: Câmera Lenta ativada e o campo abre (zoom-out)!
+            if (slowEnergy > 5) {
+                isSlowMo = true;
+                timeScale = 0.28; // Bullet-time suave
+                camera.targetZoom = 0.70; // O campo abre! Visão ampla!
+                camera.targetOffsetY = height * 0.16; // Mostra muito mais à frente
+                slowEnergy -= getSlowDrainRate() * dt;
+                if (appEl) appEl.classList.add('slowmo');
+
+                if (slowEnergy <= 0) {
+                    slowEnergy = 0;
+                    isSlowMo = false;
+                    timeScale = 1.0;
+                    camera.targetZoom = 1.0;
+                    camera.targetOffsetY = 0;
+                    if (appEl) appEl.classList.remove('slowmo');
+                }
+            } else {
+                isSlowMo = false;
+                timeScale = 1.0;
+                camera.targetZoom = 1.0;
+                camera.targetOffsetY = 0;
+                if (appEl) appEl.classList.remove('slowmo');
+            }
+        } else {
+            // SEGURANDO O DEDO: Corre normal, câmera foca no jogador e recarrega energia
+            isSlowMo = false;
+            timeScale = 1.0;
+            camera.targetZoom = 1.0;
+            camera.targetOffsetY = 0;
+            if (appEl) appEl.classList.remove('slowmo');
+
+            if (slowEnergy < 100) {
+                slowEnergy = Math.min(100, slowEnergy + getSlowRecoveryRate() * dt);
+            }
         }
     } else {
+        isSlowMo = false;
         timeScale = 1.0;
-        if (slowEnergy < 100) {
-            slowEnergy = Math.min(100, slowEnergy + SLOWMO_RECOVERY_RATE * dt);
-        }
+        camera.targetZoom = 1.0;
+        camera.targetOffsetY = 0;
+        if (appEl) appEl.classList.remove('slowmo');
     }
+
+    // Interpolação suave da câmera
+    camera.zoom += (camera.targetZoom - camera.zoom) * Math.min(1, 8 * dt);
+    camera.offsetY += (camera.targetOffsetY - camera.offsetY) * Math.min(1, 8 * dt);
+
     if (slowFillEl) slowFillEl.style.width = `${Math.max(0, Math.min(100, slowEnergy))}%`;
 }
 
@@ -3016,10 +3169,18 @@ function gameLoop(timestamp) {
         ctx.translate(sx, sy);
     }
 
-    ctx.clearRect(0, 0, width, height);
+    // Câmera dinâmica centralizada no jogador (zoom-out do Slow-Mo)
+    if (camera.zoom !== 1.0 || camera.offsetY !== 0) {
+        const pivotX = player.x;
+        const pivotY = player.y;
+        ctx.translate(pivotX, pivotY + camera.offsetY);
+        ctx.scale(camera.zoom, camera.zoom);
+        ctx.translate(-pivotX, -pivotY);
+    }
+
+    ctx.clearRect(-width * 0.5, -height * 0.5, width * 2, height * 2);
 
     drawPitch(dt);
-    drawPenaltyScene();
 
     update(dt);
 
